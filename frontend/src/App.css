@@ -1,0 +1,252 @@
+:root {
+  --pnc-green: #00703c;
+  --pnc-gold: #ffcc00;
+  --bg-gray: #f4f7f6;
+  --white: #ffffff;
+  --error: #dc3545;
+  --success: #28a745;
+}
+
+/* 1. RESET & BASE STYLES */
+body {
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  color: #333;
+}
+
+/* 2. LAYOUT WRAPPERS */
+.page-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center; /* Centers Login/Signup/Profile vertically */
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Dashboard Layout for Checker */
+.checker-layout {
+  display: flex;
+  gap: 25px;
+  max-width: 1200px;
+  margin: 40px auto;
+  align-items: flex-start;
+}
+
+/* 3. CARD & CONTAINER SYSTEM */
+.login-card, .card, .profile-card, .container {
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  padding: 40px;
+  border-top: 8px solid var(--pnc-green);
+  box-sizing: border-box;
+}
+
+/* Small Cards (Login/Signup/Profile) */
+.login-card, .card, .profile-card {
+  width: 100%;
+  max-width: 400px; /* Limits the width so it doesn't look stretched */
+  text-align: center;
+}
+
+/* Large Container (Checker) */
+.container {
+  flex: 2;
+  width: 100%;
+}
+
+/* 4. INPUTS & TEXTAREA FIX */
+input, select, textarea {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 16px;
+  box-sizing: border-box; /* Crucial: ensures padding doesn't break width */
+  transition: border-color 0.3s ease;
+}
+
+textarea {
+  min-height: 250px; /* THE FIX: Makes the input box spacious */
+  resize: vertical;
+  line-height: 1.6;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--pnc-green);
+  outline: none;
+  box-shadow: 0 0 8px rgba(0, 112, 60, 0.1);
+}
+
+/* 5. BUTTON SYSTEM - THE GIANT BUTTON FIX */
+.main-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+button {
+  height: 50px;
+  min-width: 160px; /* THE FIX: Buttons are now consistent but not giant */
+  padding: 0 24px;
+  background-color: var(--pnc-green);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* Secondary/Clear Button */
+button[style*="background: rgb(108, 117, 125)"], 
+.btn-secondary {
+  background: #6c757d !important;
+}
+
+/* 6. TABLE & SIDEBAR */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th {
+  text-align: left;
+  padding: 12px;
+  background: #f8f9fa;
+  border-bottom: 2px solid #eee;
+  color: var(--pnc-green);
+}
+
+td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.sidebar {
+  flex: 1;
+  position: sticky;
+  top: 40px;
+  height: auto;
+}
+
+/* 7. ANIMATION POPUPS */
+.popup {
+  background: white;
+  border-radius: 12px;
+  border-left: 5px solid var(--pnc-green);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  padding: 15px;
+}
+
+.pos-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  background: #e8f5e9;
+  color: var(--pnc-green);
+  border-radius: 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* Specific logic for the Profile content alignment */
+.profile-details-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 25px;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Pushes label left and box right */
+  gap: 15px;
+}
+
+.profile-row label {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--pnc-green);
+  text-align: left;
+  flex: 1;
+}
+
+.info-box-display {
+  flex: 2;
+  background: #fcfcfc;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 15px;
+  font-size: 15px;
+  color: #333;
+  text-align: left; /* YOUR REQUEST: Student info text on the left of the box */
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+/* Ensure the secondary button uses your error color */
+.btn-secondary {
+  background-color: var(--error) !important;
+}
+
+/* Layout para sa Profile rows */
+.profile-details-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 25px;
+  width: 100%;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Label sa kaliwa, Box sa kanan */
+  gap: 15px;
+  width: 100%;
+}
+
+.profile-row label {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--pnc-green);
+  text-align: left;
+  flex: 1; /* Kumukuha ng espasyo sa kaliwa */
+}
+
+/* Box para sa student data */
+.info-box-display {
+  flex: 2; /* Mas malapad ang box sa kanan */
+  background: #fcfcfc;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 15px;
+  font-size: 15px;
+  color: #333;
+  text-align: left; /* Ang text ay nasa kaliwa ng box gaya ng request mo */
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+/* Siguraduhin na ang Logout button ay pula gaya ng sa image */
+.btn-secondary {
+  background-color: var(--error) !important;
+  color: white !important;
+}
