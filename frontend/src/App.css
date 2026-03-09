@@ -152,15 +152,27 @@ td {
   padding: 15px;
 }
 
+/* Part of Speech badges – color by type */
 .pos-badge {
   font-size: 11px;
-  padding: 3px 10px;
-  background: #e8f5e9;
-  color: var(--pnc-green);
+  padding: 4px 10px;
   border-radius: 20px;
   font-weight: bold;
   text-transform: uppercase;
+  display: inline-block;
 }
+.pos-noun { background: #bbdefb; color: #1565c0; }
+.pos-verb { background: #c8e6c9; color: #2e7d32; }
+.pos-adjective { background: #ffe0b2; color: #e65100; }
+.pos-adverb { background: #e1bee7; color: #6a1b9a; }
+.pos-pronoun { background: #b2dfdb; color: #00695c; }
+.pos-preposition { background: #ffccbc; color: #bf360c; }
+.pos-conjunction { background: #d1c4e9; color: #4527a0; }
+.pos-determiner { background: #cfd8dc; color: #37474f; }
+.pos-interjection { background: #fff9c4; color: #f9a825; }
+.pos-particle { background: #f5f5f5; color: #616161; }
+.pos-unknown { background: #eeeeee; color: #757575; }
+.pos-default { background: #e8f5e9; color: var(--pnc-green); }
 
 /* Specific logic for the Profile content alignment */
 .profile-details-container {
