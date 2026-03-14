@@ -10,7 +10,8 @@ class SpellCorrectionService
         private WeightedLevenshteinService $levenshtein,
         private POSTaggingService $posTagging,
         private LanguageDetectionService $languageDetection,
-        private SentenceAnalyticsService $analytics
+        private SentenceAnalyticsService $analytics,
+        private ThesaurusService $thesaurus
     ) {
     }
 
@@ -50,17 +51,48 @@ class SpellCorrectionService
 
             $candidates = $this->dictionary->getCandidates($normalized, $lengthTolerance, $maxSuggestions * 3);
             $scored = [];
+            $seenWords = [];
             foreach ($candidates as $c) {
                 $d = $this->levenshtein->distance($normalized, $c['word']);
                 if ($d <= $maxDistance) {
-                    $scored[] = [
-                        'word' => $c['word'],
-                        'distance' => round($d, 2),
-                        'pos' => $c['pos'] ?? $this->posTagging->tag($c['word'], $c['pos'] ?? null),
-                        'frequency' => $c['frequency'],
-                    ];
+                    $key = mb_strtolower($c['word']);
+                    if (! isset($seenWords[$key])) {
+                        $seenWords[$key] = true;
+                        $scored[] = [
+                            'word' => $c['word'],
+                            'distance' => round($d, 2),
+                            'pos' => $c['pos'] ?? $this->posTagging->tag($c['word'], $c['pos'] ?? null),
+                            'frequency' => $c['frequency'],
+                        ];
+                    }
                 }
             }
+
+            if (count($scored) < $maxSuggestions && $this->shouldUseThesaurus($normalized)) {
+                $thesaurusCandidates = $this->thesaurus->getSuggestions($normalized);
+                foreach ($thesaurusCandidates as $th) {
+                    $w = $th['word'] ?? null;
+                    if ($w === null) {
+                        continue;
+                    }
+                    $key = mb_strtolower($w);
+                    if (isset($seenWords[$key])) {
+                        continue;
+                    }
+                    $entry = $this->dictionary->find($key);
+                    $dist = $this->levenshtein->distance($normalized, $key);
+                    if ($dist <= $maxDistance + 1) {
+                        $seenWords[$key] = true;
+                        $scored[] = [
+                            'word' => $w,
+                            'distance' => round(min($dist, 2.0), 2),
+                            'pos' => $entry?->pos ?? $this->posTagging->tag($w, null),
+                            'frequency' => $entry ? (int) $entry->frequency : 0,
+                        ];
+                    }
+                }
+            }
+
             usort($scored, function ($a, $b) {
                 $cmp = $a['distance'] <=> $b['distance'];
                 if ($cmp !== 0) {
@@ -93,5 +125,16 @@ class SpellCorrectionService
             'analytics' => $analytics,
             'language' => $detectedLanguage,
         ];
+    }
+
+    private function shouldUseThesaurus(string $normalizedWord): bool
+    {
+        if (! config('spelling.use_thesaurus', true)) {
+            return false;
+        }
+        if (mb_strlen($normalizedWord) < 3) {
+            return false;
+        }
+        return (bool) preg_match('/^[a-z\'-]+$/u', $normalizedWord);
     }
 }

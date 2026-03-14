@@ -2,8 +2,26 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export default function Signup() {
-  const [formData, setFormData] = useState({ name: '', id: '', section: '' });
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    middleName: '',
+    id: '',
+    section: '',
+    password: '',
+  });
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const containerVariants = {
@@ -16,15 +34,39 @@ export default function Signup() {
     visible: { y: 0, opacity: 1 }
   };
 
-  const handleSignUp = () => {
-    if (!formData.name || !formData.id || !formData.section) {
-      alert("Please fill in all fields for our research records.");
+  const handleSignUp = async () => {
+    if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.id || !formData.section || !formData.password) {
+      alert("Please fill in all required fields (First name, Last name, Student ID, Section, Password).");
       return;
     }
-    const studentData = { ...formData, totalChecks: 0 };
-    localStorage.setItem('student_' + formData.id, JSON.stringify(studentData));
-    alert("Registration Successful!");
-    navigate('/login');
+    if (formData.password.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+    if (!agreeToTerms) {
+      alert("You must accept the Terms and Agreement to create an account.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const passwordHash = await hashPassword(formData.password);
+      const fullName = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(' ');
+      const studentData = {
+        name: fullName,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        middleName: formData.middleName.trim(),
+        id: formData.id,
+        section: formData.section,
+        totalChecks: 0,
+        passwordHash,
+      };
+      localStorage.setItem('student_' + formData.id, JSON.stringify(studentData));
+      alert("Registration Successful!");
+      navigate('/login');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,9 +83,25 @@ export default function Signup() {
           <motion.div variants={itemVariants}>
             <input 
               type="text" 
-              placeholder="Full Name" 
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})} 
+              placeholder="Last name" 
+              value={formData.lastName}
+              onChange={(e) => setFormData({...formData, lastName: e.target.value})} 
+            />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <input 
+              type="text" 
+              placeholder="First name" 
+              value={formData.firstName}
+              onChange={(e) => setFormData({...formData, firstName: e.target.value})} 
+            />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <input 
+              type="text" 
+              placeholder="Middle name (optional)" 
+              value={formData.middleName}
+              onChange={(e) => setFormData({...formData, middleName: e.target.value})} 
             />
           </motion.div>
 
@@ -69,13 +127,48 @@ export default function Signup() {
             </select>
           </motion.div>
 
+          <motion.div variants={itemVariants} className="password-input-wrap">
+            <input 
+              type={showPassword ? 'text' : 'password'} 
+              placeholder="Password (min 6 characters)" 
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})} 
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="terms-agreement">
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', textAlign: 'left', cursor: 'pointer', marginBottom: '15px' }}>
+              <input
+                type="checkbox"
+                checked={agreeToTerms}
+                onChange={(e) => setAgreeToTerms(e.target.checked)}
+                style={{ width: 'auto', marginTop: '4px', marginBottom: 0 }}
+              />
+              <span>
+                I have read and agree to the{' '}
+                <strong>Terms and Agreement</strong>
+                {' '}(use of this system for research, data handling, and participation guidelines). I understand my data will be stored locally for this study.
+              </span>
+            </label>
+          </motion.div>
+
           <motion.button 
             variants={itemVariants}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleSignUp}
+            disabled={loading}
           >
-            Create Account
+            {loading ? 'Creating account...' : 'Create Account'}
           </motion.button>
         </div>
 

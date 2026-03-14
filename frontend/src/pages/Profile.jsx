@@ -12,7 +12,12 @@ export default function Profile() {
     const savedData = localStorage.getItem('student_' + studentId);
     
     if (savedData) {
-      setUserData(JSON.parse(savedData));
+      try {
+        setUserData(JSON.parse(savedData));
+      } catch {
+        localStorage.removeItem('student_' + studentId);
+        navigate('/login');
+      }
     } else {
       navigate('/login');
     }

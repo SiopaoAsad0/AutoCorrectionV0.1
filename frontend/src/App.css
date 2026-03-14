@@ -76,10 +76,91 @@ textarea {
   line-height: 1.6;
 }
 
+/* In-textarea highlight: mirror behind textarea */
+.textarea-highlight-wrap {
+  position: relative;
+  margin-bottom: 15px;
+}
+.textarea-mirror {
+  position: absolute;
+  inset: 0;
+  padding: 14px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  font-size: 16px;
+  line-height: 1.6;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: auto;
+  pointer-events: none;
+  color: transparent;
+  resize: none;
+  font-family: inherit;
+}
+.textarea-highlight-wrap .textarea-with-highlight {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.85);
+  min-height: 250px;
+}
+.textarea-highlight-wrap .textarea-with-highlight:focus {
+  background: rgba(255, 255, 255, 0.92);
+}
+/* When analysis is run, make textarea more transparent so colored highlight shows through */
+.textarea-highlight-wrap.has-highlight .textarea-with-highlight {
+  background: rgba(255, 255, 255, 0.55);
+  caret-color: #333;
+}
+.textarea-highlight-wrap.has-highlight .textarea-with-highlight:focus {
+  background: rgba(255, 255, 255, 0.75);
+}
+.word-status-inline {
+  padding: 0 1px;
+  border-radius: 3px;
+}
+.word-status-inline.status-correct {
+  background: #c8e6c9;
+}
+.word-status-inline.status-suggested {
+  background: #ffe0b2;
+}
+.word-status-inline.status-misspelled {
+  background: #ffcdd2;
+}
+
 input:focus, select:focus, textarea:focus {
   border-color: var(--pnc-green);
   outline: none;
   box-shadow: 0 0 8px rgba(0, 112, 60, 0.1);
+}
+
+/* Password field with show/hide toggle */
+.password-input-wrap {
+  position: relative;
+  margin-bottom: 15px;
+}
+.password-input-wrap input {
+  margin-bottom: 0;
+  padding-right: 70px;
+}
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: auto;
+  height: auto;
+  padding: 6px 12px;
+  font-size: 13px;
+  margin: 0;
+  background: var(--bg-gray);
+  color: #555;
+  border: 1px solid #e0e0e0;
+}
+.password-toggle:hover {
+  background: #e8e8e8;
+  color: #333;
 }
 
 /* 5. BUTTON SYSTEM - THE GIANT BUTTON FIX */
@@ -173,6 +254,38 @@ td {
 .pos-particle { background: #f5f5f5; color: #616161; }
 .pos-unknown { background: #eeeeee; color: #757575; }
 .pos-default { background: #e8f5e9; color: var(--pnc-green); }
+
+/* Highlighted sentence: correct / suggested / incorrect */
+.highlighted-sentence {
+  line-height: 1.8;
+  word-wrap: break-word;
+}
+.word-status {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-right: 2px;
+  transition: background 0.15s ease;
+}
+.word-status:hover {
+  filter: brightness(0.95);
+}
+.word-status.status-correct {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+.word-status.status-suggested {
+  background: #ffe0b2;
+  color: #e65100;
+}
+.word-status.status-misspelled {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+.word-status.selected {
+  outline: 2px solid var(--pnc-green);
+  outline-offset: 2px;
+}
 
 /* Specific logic for the Profile content alignment */
 .profile-details-container {

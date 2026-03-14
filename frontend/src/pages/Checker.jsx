@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -44,7 +44,40 @@ export default function Checker() {
   const [selectedWord, setSelectedWord] = useState(null);
   const [activeSuggestion, setActiveSuggestion] = useState(null);
   const textareaRef = useRef(null);
+  const mirrorRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const pncUser = localStorage.getItem('pnc_user');
+    if (!isLoggedIn || !pncUser) {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
+
+  const syncScroll = () => {
+    if (textareaRef.current && mirrorRef.current) {
+      mirrorRef.current.scrollTop = textareaRef.current.scrollTop;
+      mirrorRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  };
+
+  const chunks = text.split(/(\s+)/);
+  const wordCount = chunks.filter((c) => c.trim() !== '').length;
+  const canHighlight = results.length > 0 && results.length === wordCount;
+  let wordIndex = 0;
+  const mirrorContent = canHighlight
+    ? chunks.map((chunk, i) => {
+        if (chunk.trim() === '') return chunk;
+        const res = results[wordIndex++];
+        const status = res?.status || 'misspelled';
+        return (
+          <span key={i} className={`word-status-inline status-${status}`}>
+            {chunk}
+          </span>
+        );
+      })
+    : [text];
 
   const runAnalysis = async () => {
     const trimmed = text.trim();
@@ -98,20 +131,25 @@ export default function Checker() {
           const wordResult = results.find(
             (r) => r.normalized === cleanWord || r.word === w.trim()
           );
-          if (wordResult && wordResult.suggestions && wordResult.suggestions.length > 0) {
-            const rect = textareaRef.current.getBoundingClientRect();
-            setActiveSuggestion({
-              word: cleanWord,
-              start: currentPos,
-              end: currentPos + w.length,
-              suggestions: wordResult.suggestions.map((s) => ({
-                word: s.word,
-                dist: s.distance ?? s.dist,
-                pos: s.pos ?? 'Unknown',
-              })),
-              x: Math.min(e.clientX - rect.left, rect.width - 200),
-              y: e.clientY - rect.top + 10,
-            });
+          if (wordResult) {
+            setSelectedWord(wordResult);
+            if (wordResult.suggestions && wordResult.suggestions.length > 0) {
+              const rect = textareaRef.current.getBoundingClientRect();
+              setActiveSuggestion({
+                word: cleanWord,
+                start: currentPos,
+                end: currentPos + w.length,
+                suggestions: wordResult.suggestions.map((s) => ({
+                  word: s.word,
+                  dist: s.distance ?? s.dist,
+                  pos: s.pos ?? 'Unknown',
+                })),
+                x: Math.min(e.clientX - rect.left, rect.width - 200),
+                y: e.clientY - rect.top + 10,
+              });
+            } else {
+              setActiveSuggestion(null);
+            }
             return;
           }
         }
@@ -129,6 +167,10 @@ export default function Checker() {
       text.substring(activeSuggestion.end);
     setText(newText);
     setActiveSuggestion(null);
+    setSelectedWord(null);
+    setResults([]);
+    setAnalytics(null);
+    setLanguage(null);
   };
 
   const downloadCSV = () => {
@@ -164,7 +206,14 @@ export default function Checker() {
     >
       <div className="container" style={{ flex: '2', position: 'relative' }}>
         <h2>PNC Taglish Spell Checker</h2>
-        <div style={{ position: 'relative' }}>
+        <div className={`textarea-highlight-wrap${canHighlight ? ' has-highlight' : ''}`}>
+          <div
+            ref={mirrorRef}
+            className="textarea-mirror"
+            aria-hidden="true"
+          >
+            {canHighlight ? mirrorContent : text || '\u00A0'}
+          </div>
           <textarea
             ref={textareaRef}
             rows="6"
@@ -173,8 +222,10 @@ export default function Checker() {
               setText(e.target.value);
               setActiveSuggestion(null);
             }}
+            onScroll={syncScroll}
             onClick={handleTextareaClick}
-            placeholder="Type here. Run Analysis to check spelling. Click highlighted words for suggestions..."
+            className="textarea-with-highlight"
+            placeholder="Type here. Run Analysis to check spelling. Click words to see part of speech..."
           />
           <AnimatePresence>
             {activeSuggestion && (
@@ -247,6 +298,11 @@ export default function Checker() {
             )}
           </AnimatePresence>
         </div>
+        {results.length > 0 && (
+          <p style={{ fontSize: 12, color: '#666', marginTop: 6, marginBottom: 0 }}>
+            Green = correct, orange = has suggestion, red = incorrect. Click a word in the box above to see part of speech and suggestions.
+          </p>
+        )}
 
         {error && (
           <div
@@ -294,30 +350,6 @@ export default function Checker() {
             Clear
           </motion.button>
         </div>
-
-        {/* Sentence view: each word with its Part of Speech below */}
-        {results.length > 0 && (
-          <div style={{ marginTop: 24, padding: 16, background: '#fafafa', borderRadius: 12, border: '1px solid #eee' }}>
-            <h4 style={{ marginTop: 0, marginBottom: 12, color: '#00703c' }}>Sentence with Part of Speech</h4>
-            <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-              Each word is labeled with its type of speech (POS) as detected by the system.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', alignItems: 'flex-end' }}>
-              {results.map((res, i) => (
-                <span
-                  key={i}
-                  onClick={() => setSelectedWord(res)}
-                  style={{ cursor: 'pointer', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '4px 6px', borderRadius: 8, background: selectedWord?.word === res.word ? '#e8f5e9' : 'transparent' }}
-                >
-                  <span style={{ fontWeight: 600, fontSize: 15 }}>{res.word}</span>
-                  <span className={`pos-badge ${getPOSClass(res.pos)}`} style={{ marginTop: 4 }}>
-                    {res.pos ?? 'Unknown'}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
 
         <motion.table layout style={{ marginTop: '30px' }}>
           <thead>
@@ -438,7 +470,11 @@ export default function Checker() {
             Export (.csv)
           </button>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => {
+              localStorage.removeItem('isLoggedIn');
+              localStorage.removeItem('pnc_user');
+              navigate('/login');
+            }}
             style={{ backgroundColor: '#dc3545', width: 'auto' }}
           >
             Logout System

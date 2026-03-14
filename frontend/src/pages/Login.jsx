@@ -2,18 +2,54 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export default function Login() {
   const [studentId, setStudentId] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    const savedData = localStorage.getItem('student_' + studentId);
-    if (savedData) {
+  const handleLogin = async () => {
+    if (!studentId || !password) {
+      alert('Please enter both Student ID and password.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const savedData = localStorage.getItem('student_' + studentId);
+      if (!savedData) {
+        alert('Access Denied: Student ID not recognized.');
+        return;
+      }
+      let student;
+      try {
+        student = JSON.parse(savedData);
+      } catch {
+        alert('Invalid account data. Please register again.');
+        return;
+      }
+      if (!student.passwordHash) {
+        alert('This account was created before password login. Please register again to set a password.');
+        return;
+      }
+      const passwordHash = await hashPassword(password);
+      if (student.passwordHash !== passwordHash) {
+        alert('Access Denied: Incorrect password.');
+        return;
+      }
       localStorage.setItem('isLoggedIn', 'true');
       localStorage.setItem('pnc_user', studentId);
       navigate('/checker');
-    } else {
-      alert("Access Denied: Student ID not recognized.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -35,12 +71,31 @@ export default function Login() {
             value={studentId}
             onChange={(e) => setStudentId(e.target.value)}
           />
+          <div className="password-input-wrap">
+            <input 
+              type={showPassword ? 'text' : 'password'} 
+              placeholder="Enter password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleLogin}
+            disabled={loading}
           >
-            Login to Checker
+            {loading ? 'Signing in...' : 'Login to Checker'}
           </motion.button>
         </div>
         
