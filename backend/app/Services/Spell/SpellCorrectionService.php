@@ -23,11 +23,14 @@ class SpellCorrectionService
         $maxSuggestions = (int) config('spelling.max_suggestions', 5);
         $maxDistance = (float) config('spelling.max_levenshtein_distance', 3);
         $lengthTolerance = (int) config('spelling.length_tolerance', 2);
+        $directCorrections = config('spelling.direct_corrections', []);
 
         $wordResults = [];
         $wordLanguageMap = [];
 
-        foreach ($tokens as $token) {
+        $tokenCount = count($tokens);
+        for ($i = 0; $i < $tokenCount; $i++) {
+            $token = $tokens[$i];
             $raw = $token['raw'];
             $normalized = $token['normalized'];
             $entry = $this->dictionary->find($normalized);
@@ -52,6 +55,27 @@ class SpellCorrectionService
             $candidates = $this->dictionary->getCandidates($normalized, $lengthTolerance, $maxSuggestions * 3);
             $scored = [];
             $seenWords = [];
+
+            $phraseKey = $normalized;
+            if ($i + 1 < $tokenCount) {
+                $nextNormalized = $tokens[$i + 1]['normalized'];
+                $phraseKey = trim($normalized.' '.$nextNormalized);
+            }
+
+            $directTarget = $directCorrections[$phraseKey] ?? $directCorrections[$normalized] ?? null;
+            if (is_string($directTarget) && $directTarget !== '') {
+                $normalizedTarget = $this->normalizeSuggestionTarget($directTarget);
+                $targetEntry = $normalizedTarget !== '' ? $this->dictionary->find($normalizedTarget) : null;
+                $seenWords[mb_strtolower($directTarget)] = true;
+                $scored[] = [
+                    'word' => $directTarget,
+                    'compare_word' => $normalizedTarget !== '' ? $normalizedTarget : $directTarget,
+                    'distance' => 0.0,
+                    'pos' => $targetEntry?->pos ?? $this->posTagging->tag($directTarget, null),
+                    'frequency' => $targetEntry ? (int) $targetEntry->frequency + 1000 : 1000,
+                ];
+            }
+
             foreach ($candidates as $c) {
                 $compare = $c['word'];
                 $d = $this->levenshtein->distance($normalized, $compare);
@@ -149,5 +173,11 @@ class SpellCorrectionService
         }
 
         return (bool) preg_match('/^[a-z\'-]+$/u', $normalizedWord);
+    }
+
+    private function normalizeSuggestionTarget(string $word): string
+    {
+        $lower = mb_strtolower($word);
+        return preg_replace('/[^\p{L}\p{N}\'-]/u', '', $lower) ?? '';
     }
 }
