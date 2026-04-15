@@ -4,9 +4,28 @@ namespace Database\Seeders;
 
 use App\Models\Dictionary;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DictionarySeeder extends Seeder
 {
+    private const CORPUS_ENGLISH_FREQUENCY = 6;
+
+    private const CORPUS_TAGALOG_FREQUENCY = 5;
+
+    /** High-frequency English list (google-10000-english, MIT). */
+    private const BULK_ENGLISH_FREQUENCY = 7;
+
+    /** Same lemmas as common English, tagged for Taglish code-mixing. */
+    private const BULK_ENGLISH_AS_TAGLISH_FREQUENCY = 6;
+
+    /** Tagalog lemmas mirrored as Taglish (same surface forms in mixed speech). */
+    private const TAGALOG_AS_TAGLISH_FREQUENCY = 4;
+
+    /** Taglish-only colloquial / code-switch list (frontend/public/taglish/taglish_common.txt). */
+    private const TAGLISH_EXTRA_FREQUENCY = 5;
+
+    private const INSERT_CHUNK = 600;
+
     public function run(): void
     {
         $words = array_merge(
@@ -21,6 +40,178 @@ class DictionarySeeder extends Seeder
                 $entry
             );
         }
+
+        // ~10k English + same as Taglish; typo corpora; ~42k Tagalog + mirror as Taglish
+        $this->seedLineLexiconFromPublic(
+            'english/google-10000-english.txt',
+            'english',
+            self::BULK_ENGLISH_FREQUENCY
+        );
+        $this->seedLineLexiconFromPublic(
+            'english/google-10000-english.txt',
+            'taglish',
+            self::BULK_ENGLISH_AS_TAGLISH_FREQUENCY
+        );
+
+        $this->seedEnglishTypoCorpora();
+        $this->seedLineLexiconFromPublic(
+            'tagalog/tagalog_dict.txt',
+            'tagalog',
+            self::CORPUS_TAGALOG_FREQUENCY
+        );
+        $this->seedLineLexiconFromPublic(
+            'tagalog/tagalog_dict.txt',
+            'taglish',
+            self::TAGALOG_AS_TAGLISH_FREQUENCY
+        );
+
+        $this->seedLineLexiconFromPublic(
+            'taglish/taglish_common.txt',
+            'taglish',
+            self::TAGLISH_EXTRA_FREQUENCY
+        );
+    }
+
+    /**
+     * English typo corpora (correct word left of ":") — same format as aspell / Birkbeck / Wikipedia lists.
+     */
+    private function seedEnglishTypoCorpora(): void
+    {
+        $relativeFiles = [
+            'english/aspell.txt',
+            'english/birkbeck.txt',
+            'english/wikipedia.txt',
+            'english/spell-testset1.txt',
+            'english/spell-testset2.txt',
+        ];
+
+        $base = $this->frontendPublicPath();
+        if ($base === null) {
+            return;
+        }
+
+        $now = now()->toDateTimeString();
+        $batch = [];
+
+        foreach ($relativeFiles as $rel) {
+            $path = $base.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $rel);
+            if (! is_readable($path)) {
+                continue;
+            }
+            $fh = fopen($path, 'r');
+            if ($fh === false) {
+                continue;
+            }
+            while (($line = fgets($fh)) !== false) {
+                $word = $this->correctWordFromTypoCorpusLine($line);
+                if ($word === null) {
+                    continue;
+                }
+                $batch[] = [
+                    'word' => $word,
+                    'language' => 'english',
+                    'pos' => null,
+                    'frequency' => self::CORPUS_ENGLISH_FREQUENCY,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+                if (count($batch) >= self::INSERT_CHUNK) {
+                    DB::table('dictionaries')->insertOrIgnore($batch);
+                    $batch = [];
+                }
+            }
+            fclose($fh);
+        }
+
+        if ($batch !== []) {
+            DB::table('dictionaries')->insertOrIgnore($batch);
+        }
+    }
+
+    /**
+     * One word per line under frontend/public (UTF-8). Skips blanks; insertOrIgnore on (word, language).
+     */
+    private function seedLineLexiconFromPublic(string $relativePath, string $language, int $frequency): void
+    {
+        $base = $this->frontendPublicPath();
+        if ($base === null) {
+            return;
+        }
+
+        $path = $base.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+        if (! is_readable($path)) {
+            return;
+        }
+
+        $now = now()->toDateTimeString();
+        $batch = [];
+        $fh = fopen($path, 'r');
+        if ($fh === false) {
+            return;
+        }
+        while (($line = fgets($fh)) !== false) {
+            $word = $this->normalizeLexeme(trim($line));
+            if ($word === '') {
+                continue;
+            }
+            $batch[] = [
+                'word' => $word,
+                'language' => $language,
+                'pos' => null,
+                'frequency' => $frequency,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+            if (count($batch) >= self::INSERT_CHUNK) {
+                DB::table('dictionaries')->insertOrIgnore($batch);
+                $batch = [];
+            }
+        }
+        fclose($fh);
+
+        if ($batch !== []) {
+            DB::table('dictionaries')->insertOrIgnore($batch);
+        }
+    }
+
+    private function frontendPublicPath(): ?string
+    {
+        $candidates = [
+            base_path('../frontend/public'),
+            dirname(base_path(), 2).DIRECTORY_SEPARATOR.'frontend'.DIRECTORY_SEPARATOR.'public',
+        ];
+        foreach ($candidates as $dir) {
+            if (is_dir($dir)) {
+                return $dir;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeLexeme(string $raw): string
+    {
+        $lower = mb_strtolower($raw);
+
+        return preg_replace('/[^\p{L}\p{N}\'-]/u', '', $lower) ?? '';
+    }
+
+    private function correctWordFromTypoCorpusLine(string $line): ?string
+    {
+        $line = trim($line);
+        if ($line === '' || ! str_contains($line, ':')) {
+            return null;
+        }
+        [$head] = explode(':', $line, 2);
+        $head = trim($head);
+        if ($head === '') {
+            return null;
+        }
+        $parts = preg_split('/\s+/u', $head, 2);
+        $token = $parts[0] ?? '';
+        $normalized = $this->normalizeLexeme($token);
+
+        return $normalized !== '' ? $normalized : null;
     }
 
     private function englishWords(): array

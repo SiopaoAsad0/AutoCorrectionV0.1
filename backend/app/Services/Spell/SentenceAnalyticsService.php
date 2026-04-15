@@ -31,12 +31,17 @@ class SentenceAnalyticsService
         }
 
         $correctCount = $statusCounts['correct'] ?? 0;
+        $misspelledCount = $statusCounts['misspelled'] ?? 0;
+        $suggestedCount = $statusCounts['suggested'] ?? 0;
         $correctionRate = $total > 0 ? round($correctCount / $total, 4) : 0;
+        $incorrectCount = $misspelledCount + $suggestedCount;
+        $wordErrorRate = $total > 0 ? round($incorrectCount / $total, 4) : 0;
 
         return [
             'total_words' => $total,
             'pos_counts' => $posCounts,
             'correction_rate' => $correctionRate,
+            'word_error_rate' => $wordErrorRate,
             'language' => $detectedLanguage,
             'status_counts' => $statusCounts,
             'distances' => $distances,

@@ -24,7 +24,9 @@ class SpellController extends Controller
         ]);
 
         $text = $request->input('text');
+        $started = microtime(true);
         $result = $this->spellCorrection->correct($text);
+        $result['processing_time_ms'] = round((microtime(true) - $started) * 1000, 2);
 
         try {
             CorrectionLog::create([

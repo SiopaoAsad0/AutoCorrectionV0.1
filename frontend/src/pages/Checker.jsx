@@ -4,6 +4,38 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = ''; // use Vite proxy: /api -> Laravel
 
+/** Match suggestion casing to the original token (Title, ALL CAPS, or lower). */
+function adjustCaseToMatchOriginal(suggestion, originalRaw) {
+  if (!suggestion || !originalRaw) return suggestion;
+  const s = String(suggestion);
+  const o = originalRaw;
+  if (o === o.toUpperCase() && /[\p{L}]/u.test(o)) {
+    return s.toUpperCase();
+  }
+  if (/^\p{Lu}/u.test(o)) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  return s;
+}
+
+/** Nth word token in text (split like the highlighter); returns start/end in full string. */
+function getWordChunkBounds(fullText, targetWordIndex) {
+  const parts = fullText.split(/(\s+)/u);
+  let wi = 0;
+  let pos = 0;
+  for (const part of parts) {
+    const len = part.length;
+    if (part.trim() !== '') {
+      if (wi === targetWordIndex) {
+        return { start: pos, end: pos + len, raw: part };
+      }
+      wi++;
+    }
+    pos += len;
+  }
+  return null;
+}
+
 /** Map Part of Speech to CSS class for color-coded badges */
 function getPOSClass(pos) {
   if (!pos || pos === 'Unknown') return 'pos-unknown';
@@ -39,9 +71,11 @@ export default function Checker() {
   const [results, setResults] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [language, setLanguage] = useState(null);
+  const [latencyMs, setLatencyMs] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedWord, setSelectedWord] = useState(null);
+  const [selectedWordIndex, setSelectedWordIndex] = useState(null);
   const [activeSuggestion, setActiveSuggestion] = useState(null);
   const textareaRef = useRef(null);
   const mirrorRef = useRef(null);
@@ -62,7 +96,7 @@ export default function Checker() {
     }
   };
 
-  const chunks = text.split(/(\s+)/);
+  const chunks = text.split(/(\s+)/u);
   const wordCount = chunks.filter((c) => c.trim() !== '').length;
   const canHighlight = results.length > 0 && results.length === wordCount;
   let wordIndex = 0;
@@ -101,11 +135,13 @@ export default function Checker() {
       setResults(data.words || []);
       setAnalytics(data.analytics || null);
       setLanguage(data.language || null);
+      setLatencyMs(data.processing_time_ms ?? null);
     } catch (err) {
       setError(err.message || 'Analysis failed. Is the Laravel backend running on port 8000?');
       setResults([]);
       setAnalytics(null);
       setLanguage(null);
+      setLatencyMs(null);
     } finally {
       setLoading(false);
     }
@@ -122,55 +158,71 @@ export default function Checker() {
   const handleTextareaClick = (e) => {
     if (results.length === 0) return;
     const cursor = e.target.selectionStart;
-    const words = text.split(/(\s+)/);
+    const words = text.split(/(\s+)/u);
     let currentPos = 0;
+    let wordIdx = 0;
     for (const w of words) {
-      if (cursor >= currentPos && cursor <= currentPos + w.length && w.trim() !== '') {
-        const cleanWord = w.toLowerCase().replace(/[^\w-]/g, '');
-        if (cleanWord) {
-          const wordResult = results.find(
-            (r) => r.normalized === cleanWord || r.word === w.trim()
-          );
-          if (wordResult) {
-            setSelectedWord(wordResult);
-            if (wordResult.suggestions && wordResult.suggestions.length > 0) {
-              const rect = textareaRef.current.getBoundingClientRect();
-              setActiveSuggestion({
-                word: cleanWord,
-                start: currentPos,
-                end: currentPos + w.length,
-                suggestions: wordResult.suggestions.map((s) => ({
-                  word: s.word,
-                  dist: s.distance ?? s.dist,
-                  pos: s.pos ?? 'Unknown',
-                })),
-                x: Math.min(e.clientX - rect.left, rect.width - 200),
-                y: e.clientY - rect.top + 10,
-              });
-            } else {
-              setActiveSuggestion(null);
-            }
-            return;
+      if (w.trim() === '') {
+        currentPos += w.length;
+        continue;
+      }
+      if (cursor >= currentPos && cursor < currentPos + w.length) {
+        const wordResult = results[wordIdx];
+        if (wordResult) {
+          setSelectedWord(wordResult);
+          setSelectedWordIndex(wordIdx);
+          if (wordResult.suggestions && wordResult.suggestions.length > 0) {
+            const rect = textareaRef.current.getBoundingClientRect();
+            setActiveSuggestion({
+              wordIndex: wordIdx,
+              start: currentPos,
+              end: currentPos + w.length,
+              raw: w,
+              suggestions: wordResult.suggestions.map((s) => ({
+                word: s.word,
+                dist: s.distance ?? s.dist,
+                pos: s.pos ?? 'Unknown',
+              })),
+              x: Math.min(e.clientX - rect.left, rect.width - 200),
+              y: e.clientY - rect.top + 10,
+            });
+          } else {
+            setActiveSuggestion(null);
           }
+          return;
         }
       }
       currentPos += w.length;
+      wordIdx++;
     }
     setActiveSuggestion(null);
   };
 
-  const replaceWord = (newWord) => {
-    if (!activeSuggestion) return;
-    const newText =
-      text.substring(0, activeSuggestion.start) +
-      newWord +
-      text.substring(activeSuggestion.end);
+  /** Replace one token with a suggestion; clears analysis so user can Run Analysis again. */
+  const applySuggestion = (wordIndex, replacement, originalRaw) => {
+    if (wordIndex == null || wordIndex < 0) return;
+    const bounds = getWordChunkBounds(text, wordIndex);
+    if (!bounds) return;
+    const raw = originalRaw ?? bounds.raw;
+    const cased = adjustCaseToMatchOriginal(replacement, raw);
+    const newText = text.slice(0, bounds.start) + cased + text.slice(bounds.end);
     setText(newText);
     setActiveSuggestion(null);
     setSelectedWord(null);
+    setSelectedWordIndex(null);
     setResults([]);
     setAnalytics(null);
     setLanguage(null);
+    setLatencyMs(null);
+  };
+
+  const replaceWordFromPopup = (newWord) => {
+    if (!activeSuggestion) return;
+    applySuggestion(
+      activeSuggestion.wordIndex,
+      newWord,
+      activeSuggestion.raw
+    );
   };
 
   const downloadCSV = () => {
@@ -221,6 +273,7 @@ export default function Checker() {
             onChange={(e) => {
               setText(e.target.value);
               setActiveSuggestion(null);
+              setSelectedWordIndex(null);
             }}
             onScroll={syncScroll}
             onClick={handleTextareaClick}
@@ -262,20 +315,21 @@ export default function Checker() {
                   <motion.div
                     whileHover={{ x: 10, backgroundColor: '#f0fcf4' }}
                     key={i}
-                    onClick={() => replaceWord(s.word)}
+                    onClick={() => replaceWordFromPopup(s.word)}
                     style={{
                       cursor: 'pointer',
                       padding: '8px',
                       borderRadius: '6px',
                       borderBottom: '1px solid #f0f0f0',
                     }}
+                    title="Replace this word in your text"
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontWeight: 'bold', color: '#00703c' }}>
                         {s.word}
                       </span>
                       <span style={{ fontSize: '10px', color: '#999' }}>
-                        Dist: {s.dist}
+                        Dist: {s.dist} · Replace
                       </span>
                     </div>
                     <div className={`pos-badge ${getPOSClass(s.pos)}`} style={{ marginTop: '4px' }}>
@@ -300,7 +354,7 @@ export default function Checker() {
         </div>
         {results.length > 0 && (
           <p style={{ fontSize: 12, color: '#666', marginTop: 6, marginBottom: 0 }}>
-            Green = correct, orange = has suggestion, red = incorrect. Click a word in the box above to see part of speech and suggestions.
+            Green = correct, orange = has suggestion, red = incorrect. Click a word for POS and suggestions; choose a suggestion to replace it in your text (sidebar or popup), then run Analysis again to refresh.
           </p>
         )}
 
@@ -344,6 +398,10 @@ export default function Checker() {
               setAnalytics(null);
               setLanguage(null);
               setError(null);
+              setSelectedWord(null);
+              setSelectedWordIndex(null);
+              setActiveSuggestion(null);
+              setLatencyMs(null);
             }}
             style={{ background: '#6c757d' }}
           >
@@ -368,10 +426,14 @@ export default function Checker() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.03 }}
                   key={i}
-                  onClick={() => setSelectedWord(res)}
+                  onClick={() => {
+                    setSelectedWord(res);
+                    setSelectedWordIndex(i);
+                  }}
                   style={{
                     cursor: 'pointer',
-                    background: selectedWord?.word === res.word ? '#f0fcf4' : '',
+                    background:
+                      selectedWordIndex === i ? '#f0fcf4' : '',
                   }}
                 >
                   <td style={{ color: '#888' }}>{i + 1}</td>
@@ -431,6 +493,19 @@ export default function Checker() {
               <strong>Language:</strong> {language || analytics.language}{' '}
               &nbsp;|&nbsp; <strong>Correction rate:</strong>{' '}
               {(analytics.correction_rate * 100).toFixed(1)}%
+              {typeof analytics.word_error_rate === 'number' && (
+                <>
+                  {' '}
+                  &nbsp;|&nbsp; <strong>Word error rate (WER):</strong>{' '}
+                  {(analytics.word_error_rate * 100).toFixed(1)}%
+                </>
+              )}
+              {latencyMs != null && (
+                <>
+                  {' '}
+                  &nbsp;|&nbsp; <strong>Latency:</strong> {latencyMs} ms
+                </>
+              )}
             </p>
             {analytics.status_counts && (
               <p>
@@ -528,15 +603,58 @@ export default function Checker() {
             </div>
             {selectedWord.suggestions && selectedWord.suggestions.length > 0 && (
               <div style={{ marginTop: 12 }}>
-                <small style={{ color: '#999' }}>Suggestions (with POS):</small>
-                <ul style={{ margin: '4px 0 0', paddingLeft: 20 }}>
+                <small style={{ color: '#999' }}>Suggestions — click Replace to swap in the text:</small>
+                <ul style={{ margin: '8px 0 0', paddingLeft: 0, listStyle: 'none' }}>
                   {selectedWord.suggestions.map((s, i) => (
-                    <li key={i} style={{ marginBottom: 4 }}>
-                      <strong>{s.word}</strong>
-                      <span className={`pos-badge ${getPOSClass(s.pos)}`} style={{ marginLeft: 6, fontSize: 10 }}>
-                        {s.pos ?? 'Unknown'}
-                      </span>
-                      <span style={{ color: '#888', marginLeft: 4 }}>dist: {s.distance ?? s.dist}</span>
+                    <li
+                      key={i}
+                      style={{
+                        marginBottom: 10,
+                        padding: '10px 12px',
+                        background: '#f8faf9',
+                        borderRadius: 10,
+                        border: '1px solid #e8eeea',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                        <div>
+                          <strong style={{ color: '#00703c' }}>{s.word}</strong>
+                          <span className={`pos-badge ${getPOSClass(s.pos)}`} style={{ marginLeft: 6, fontSize: 10 }}>
+                            {s.pos ?? 'Unknown'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            selectedWordIndex != null &&
+                            applySuggestion(selectedWordIndex, s.word, selectedWord.word)
+                          }
+                          disabled={selectedWordIndex == null}
+                          style={{
+                            padding: '6px 14px',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: '#00703c',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 8,
+                            cursor: selectedWordIndex == null ? 'not-allowed' : 'pointer',
+                            opacity: selectedWordIndex == null ? 0.5 : 1,
+                          }}
+                        >
+                          Replace
+                        </button>
+                      </div>
+                      <div style={{ color: '#888', fontSize: 11, marginTop: 6 }}>
+                        dist: {s.distance ?? s.dist}
+                        {s.error_breakdown && (
+                          <span>
+                            {' '}
+                            (sub {s.error_breakdown.substitutions}, ins {s.error_breakdown.insertions}, del{' '}
+                            {s.error_breakdown.deletions})
+                          </span>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>

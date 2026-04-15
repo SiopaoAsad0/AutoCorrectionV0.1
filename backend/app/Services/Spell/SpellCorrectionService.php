@@ -7,13 +7,12 @@ class SpellCorrectionService
     public function __construct(
         private TokenizationService $tokenization,
         private DictionaryService $dictionary,
-        private WeightedLevenshteinService $levenshtein,
+        private AdaptedLevenshteinService $levenshtein,
         private POSTaggingService $posTagging,
         private LanguageDetectionService $languageDetection,
         private SentenceAnalyticsService $analytics,
         private ThesaurusService $thesaurus
-    ) {
-    }
+    ) {}
 
     /**
      * Run full spell correction pipeline and return words + analytics.
@@ -46,6 +45,7 @@ class SpellCorrectionService
                     'language' => $language,
                 ];
                 $wordLanguageMap[] = ['language' => $language];
+
                 continue;
             }
 
@@ -53,13 +53,15 @@ class SpellCorrectionService
             $scored = [];
             $seenWords = [];
             foreach ($candidates as $c) {
-                $d = $this->levenshtein->distance($normalized, $c['word']);
+                $compare = $c['word'];
+                $d = $this->levenshtein->distance($normalized, $compare);
                 if ($d <= $maxDistance) {
                     $key = mb_strtolower($c['word']);
                     if (! isset($seenWords[$key])) {
                         $seenWords[$key] = true;
                         $scored[] = [
                             'word' => $c['word'],
+                            'compare_word' => $compare,
                             'distance' => round($d, 2),
                             'pos' => $c['pos'] ?? $this->posTagging->tag($c['word'], $c['pos'] ?? null),
                             'frequency' => $c['frequency'],
@@ -68,7 +70,8 @@ class SpellCorrectionService
                 }
             }
 
-            if (count($scored) < $maxSuggestions && $this->shouldUseThesaurus($normalized)) {
+            // Also pull Datamuse synonyms / near-meanings when the list is not full yet (e.g. movie → film, theater).
+            if (count($scored) < $maxSuggestions + 2 && $this->shouldUseThesaurus($normalized)) {
                 $thesaurusCandidates = $this->thesaurus->getSuggestions($normalized);
                 foreach ($thesaurusCandidates as $th) {
                     $w = $th['word'] ?? null;
@@ -85,7 +88,8 @@ class SpellCorrectionService
                         $seenWords[$key] = true;
                         $scored[] = [
                             'word' => $w,
-                            'distance' => round(min($dist, 2.0), 2),
+                            'compare_word' => $key,
+                            'distance' => round($dist, 2),
                             'pos' => $entry?->pos ?? $this->posTagging->tag($w, null),
                             'frequency' => $entry ? (int) $entry->frequency : 0,
                         ];
@@ -98,9 +102,17 @@ class SpellCorrectionService
                 if ($cmp !== 0) {
                     return $cmp;
                 }
+
                 return $b['frequency'] <=> $a['frequency'];
             });
             $suggestions = array_slice($scored, 0, $maxSuggestions);
+            foreach ($suggestions as $idx => $row) {
+                $target = $row['compare_word'] ?? $row['word'];
+                $breakdown = $this->levenshtein->editBreakdown($normalized, $target);
+                unset($row['compare_word']);
+                $row['error_breakdown'] = $breakdown;
+                $suggestions[$idx] = $row;
+            }
             $minDistance = $suggestions[0]['distance'] ?? null;
 
             $wordResults[] = [
@@ -135,6 +147,7 @@ class SpellCorrectionService
         if (mb_strlen($normalizedWord) < 3) {
             return false;
         }
+
         return (bool) preg_match('/^[a-z\'-]+$/u', $normalizedWord);
     }
 }

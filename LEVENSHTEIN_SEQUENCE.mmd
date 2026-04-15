@@ -1,0 +1,75 @@
+sequenceDiagram
+    autonumber
+    participant Client as Client (Frontend)
+    participant SC as SpellController
+    participant Sp as SpellCorrectionService
+    participant Tok as TokenizationService
+    participant Dict as DictionaryService
+    participant Lev as AdaptedLevenshteinService
+    participant DB as DB (dictionaries / typo_patterns)
+    participant Th as ThesaurusService
+    participant POS as POSTaggingService
+    participant Lang as LanguageDetectionService
+    participant An as SentenceAnalyticsService
+
+    Client->>SC: POST /api/correct { text }
+    SC->>SC: validate text
+    SC->>Sp: correct(text)
+
+    Sp->>Tok: tokenize(text)
+    Tok-->>Sp: tokens[{ raw, normalized }, ...]
+
+    loop For each token
+        Sp->>Dict: find(normalized)
+        Dict->>DB: query dictionaries
+        DB-->>Dict: entry or null
+        Dict-->>Sp: entry?
+
+        alt Word in dictionary
+            Sp->>POS: tag(normalized, dictPos)
+            POS-->>Sp: pos
+            Note over Sp: status correct, suggestions [], distance null
+        else Word not in dictionary
+            Sp->>Dict: getCandidates(normalized, lengthTolerance, limit)
+            Dict->>DB: length-filtered + frequency order
+            DB-->>Dict: candidate rows
+            Dict-->>Sp: candidates[]
+
+            loop Each candidate
+                Sp->>Lev: distance(normalized, candidate.word)
+                Lev->>DB: (weights loaded at service construct: typo_patterns)
+                Lev-->>Sp: d (float)
+                Note over Sp: keep if d <= max_levenshtein_distance
+            end
+
+            opt Few suggestions and shouldUseThesaurus 
+                Sp->>Th: getSuggestions(normalized)
+                Th-->>Sp: extra words
+                loop Each thesaurus word
+                    Sp->>Lev: distance(normalized, key)
+                    Lev-->>Sp: d
+                    Note over Sp: keep if d <= max_levenshtein_distance + 1
+                end
+            end
+
+            Sp->>Sp: sort by distance asc, frequency desc
+            Sp->>Sp: slice to max_suggestions
+            loop Each top suggestion
+                Sp->>Lev: editBreakdown(normalized, target)
+                Lev-->>Sp: { substitutions, insertions, deletions }
+            end
+            Sp->>POS: tag(normalized, null)
+            POS-->>Sp: pos
+            Note over Sp: status suggested or misspelled, distance = min of suggestions
+        end
+    end
+
+    Sp->>Lang: detect(word language hints)
+    Lang-->>Sp: detectedLanguage
+    Sp->>An: compute(wordResults, detectedLanguage)
+    An-->>Sp: analytics
+
+    Sp-->>SC: { words, analytics, language }
+    SC->>SC: add processing_time_ms
+    SC->>DB: CorrectionLog::create (optional)
+    SC-->>Client: JSON response

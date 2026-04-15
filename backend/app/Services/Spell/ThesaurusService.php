@@ -14,9 +14,10 @@ class ThesaurusService
 {
     private const DATAMUSE_BASE = 'https://api.datamuse.com/words';
 
-    private const MAX_RESULTS = 6;
+    /** Per Datamuse query; synonyms + near meanings widen “standard word” options (e.g. movie → film). */
+    private const MAX_RESULTS = 12;
 
-    private const TIMEOUT_SECONDS = 1;
+    private const TIMEOUT_SECONDS = 2;
 
     private const CACHE_TTL_SECONDS = 3600;
 
@@ -31,7 +32,7 @@ class ThesaurusService
         }
 
         $word = $normalizedWord;
-        $cacheKey = 'thesaurus:' . $word;
+        $cacheKey = 'thesaurus:'.$word;
 
         return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($word) {
             $results = [];
@@ -40,9 +41,13 @@ class ThesaurusService
                     $pool->as('sp')->timeout(self::TIMEOUT_SECONDS)->get(self::DATAMUSE_BASE, ['sp' => $word, 'max' => self::MAX_RESULTS]),
                     $pool->as('sl')->timeout(self::TIMEOUT_SECONDS)->get(self::DATAMUSE_BASE, ['sl' => $word, 'max' => self::MAX_RESULTS]),
                     $pool->as('ml')->timeout(self::TIMEOUT_SECONDS)->get(self::DATAMUSE_BASE, ['ml' => $word, 'max' => self::MAX_RESULTS]),
+                    $pool->as('syn')->timeout(self::TIMEOUT_SECONDS)->get(self::DATAMUSE_BASE, [
+                        'rel_syn' => $word,
+                        'max' => self::MAX_RESULTS,
+                    ]),
                 ]);
 
-                foreach (['sp', 'sl', 'ml'] as $key) {
+                foreach (['sp', 'sl', 'ml', 'syn'] as $key) {
                     $resp = $responses[$key] ?? null;
                     if ($resp && $resp->successful()) {
                         $data = $resp->json();
@@ -54,7 +59,13 @@ class ThesaurusService
                             if ($w === null || $w === $word) {
                                 continue;
                             }
+                            if (str_contains($w, ' ')) {
+                                continue;
+                            }
                             $score = (int) ($item['score'] ?? 0);
+                            if ($key === 'syn') {
+                                $score = max($score, 5000);
+                            }
                             if (! isset($results[$w]) || $results[$w] < $score) {
                                 $results[$w] = $score;
                             }
@@ -62,7 +73,7 @@ class ThesaurusService
                     }
                 }
             } catch (\Throwable $e) {
-                Log::debug('ThesaurusService: ' . $e->getMessage());
+                Log::debug('ThesaurusService: '.$e->getMessage());
             }
 
             uasort($results, fn ($a, $b) => $b <=> $a);
@@ -70,6 +81,7 @@ class ThesaurusService
             foreach ($results as $w => $s) {
                 $out[] = ['word' => $w, 'score' => $s];
             }
+
             return $out;
         });
     }
