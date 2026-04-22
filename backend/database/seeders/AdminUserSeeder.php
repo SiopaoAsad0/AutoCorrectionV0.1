@@ -10,8 +10,8 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        $email = env('ADMIN_EMAIL', 'admin@autocorrection.local');
-        $password = env('ADMIN_PASSWORD', 'ChangeMeAdmin!');
+        $email = env('ADMIN_EMAIL', 'Admin');
+        $password = env('ADMIN_PASSWORD', '123123');
         $name = env('ADMIN_NAME', 'Dictionary Admin');
 
         User::updateOrCreate(

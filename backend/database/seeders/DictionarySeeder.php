@@ -416,6 +416,23 @@ class DictionarySeeder extends Seeder
             ['word' => 'super', 'language' => 'taglish', 'pos' => 'Adverb', 'frequency' => 6],
             ['word' => 'ok', 'language' => 'taglish', 'pos' => 'Adjective', 'frequency' => 7],
             ['word' => 'okay', 'language' => 'taglish', 'pos' => 'Adjective', 'frequency' => 7],
+            ['word' => 'rizz', 'language' => 'taglish', 'pos' => 'Noun', 'frequency' => 6],
+            ['word' => 'delulu', 'language' => 'taglish', 'pos' => 'Adjective', 'frequency' => 6],
+            ['word' => 'aura', 'language' => 'taglish', 'pos' => 'Noun', 'frequency' => 6],
+            ['word' => 'gyat', 'language' => 'taglish', 'pos' => 'Interjection', 'frequency' => 5],
+            ['word' => 'sus', 'language' => 'taglish', 'pos' => 'Adjective', 'frequency' => 6],
+            ['word' => 'slay', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 5],
+            ['word' => 'bussin', 'language' => 'taglish', 'pos' => 'Adjective', 'frequency' => 5],
+            ['word' => 'drip', 'language' => 'taglish', 'pos' => 'Noun', 'frequency' => 5],
+            ['word' => 'brainrot', 'language' => 'taglish', 'pos' => 'Noun', 'frequency' => 5],
+            ['word' => 'lowkey', 'language' => 'taglish', 'pos' => 'Adverb', 'frequency' => 6],
+            ['word' => 'highkey', 'language' => 'taglish', 'pos' => 'Adverb', 'frequency' => 5],
+            ['word' => 'frfr', 'language' => 'taglish', 'pos' => 'Adverb', 'frequency' => 6],
+            ['word' => 'nocap', 'language' => 'taglish', 'pos' => 'Adverb', 'frequency' => 5],
+            ['word' => 'co-compute', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'mag-co-compute', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'mag-code', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'nag-code', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
         ];
     }
 }

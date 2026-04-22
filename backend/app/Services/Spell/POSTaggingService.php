@@ -27,6 +27,15 @@ class POSTaggingService
 
     private const ENGLISH_ADVERB = ['very', 'really', 'just', 'only', 'even', 'still', 'already', 'always', 'never', 'often', 'sometimes', 'here', 'there', 'where', 'when', 'why', 'how', 'now', 'then', 'today', 'later', 'soon', 'also', 'too', 'super', 'well', 'quickly', 'slowly'];
 
+    /** Emerging internet / Gen Alpha-Beta slang frequently used in mixed-language writing. */
+    private const HYBRID_SLANG = [
+        'rizz', 'delulu', 'aura', 'gyat', 'sus', 'slay', 'bussin', 'drip',
+        'npc', 'sigma', 'cap', 'nocap', 'brainrot', 'lowkey', 'highkey',
+        'based', 'cooked', 'skibidi', 'bet', 'fr', 'frfr', 'mid', 'simp',
+        'cringe', 'goated', 'mewing', 'ratio', 'valid', 'unhinged',
+        'rentfree', 'maincharacter', 'irl', 'oomf', 'fyp',
+    ];
+
     /**
      * Rule-based POS tag. Prefer dictionary POS if provided.
      */
@@ -78,6 +87,9 @@ class POSTaggingService
         if ($this->inList($w, self::ENGLISH_ADVERB)) {
             return 'Adverb';
         }
+        if ($this->inList($w, self::HYBRID_SLANG)) {
+            return 'Noun';
+        }
 
         if (preg_match('/^(dr|atty|engr|arch|prof|hon|mr|ms|mrs)\.?$/u', $w)) {
             return 'Noun';
@@ -86,7 +98,9 @@ class POSTaggingService
         if (preg_match('/^(mag|nag|mang|nang|maki|naki|ma|na|ipa|ipag|ika|pag)([a-z]+)/u', $w)
             || preg_match('/^[b-df-hj-np-rt-v]um[aeiou]/u', $w)
             || preg_match('/(um|in|an|han|nan|hin)([a-z]+)$/u', $w)
-            || preg_match('/^[a-z]+-(stress|late|attach)/u', $w)) {
+            || preg_match('/^[a-z]+-(stress|late|attach|compute|code|chat|post|stream|share)/u', $w)
+            || preg_match('/^(mag|nag)-[a-z]+(?:-[a-z]+)?$/u', $w)
+            || preg_match('/^co-[a-z]+(?:-[a-z]+)?$/u', $w)) {
             return 'Verb';
         }
         if (preg_match('/^ma[a-z]{3,}/u', $w) || preg_match('/^(naka|napaka|pala|kay)([a-z]+)/u', $w)

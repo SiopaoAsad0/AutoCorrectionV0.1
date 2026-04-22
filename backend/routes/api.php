@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminContactController;
 use App\Http\Controllers\AdminDictionaryController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\SpellController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::post('/correct', [SpellController::class, 'correct']);
+Route::post('/contact', [ContactController::class, 'store']);
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 
@@ -29,4 +32,6 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::delete('/dictionary/{dictionary}', [AdminDictionaryController::class, 'destroy']);
     Route::post('/dictionary/import', [AdminDictionaryController::class, 'importLines']);
     Route::post('/dictionary/import-dataset', [AdminDictionaryController::class, 'importDataset']);
+    Route::get('/contact-messages', [AdminContactController::class, 'index']);
+    Route::post('/contact-messages/{contactMessage}/reply', [AdminContactController::class, 'reply']);
 });

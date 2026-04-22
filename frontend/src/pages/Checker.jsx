@@ -113,8 +113,10 @@ export default function Checker() {
       })
     : [text];
 
-  const runAnalysis = async () => {
-    const trimmed = text.trim();
+  /** @param {string} [textOverride] analyze this text instead of current `text` state (keeps highlights in sync after replacements). */
+  const runAnalysis = async (textOverride) => {
+    const source = textOverride !== undefined ? textOverride : text;
+    const trimmed = String(source).trim();
     if (!trimmed) {
       setError('Please enter some text.');
       return;
@@ -178,6 +180,7 @@ export default function Checker() {
               start: currentPos,
               end: currentPos + w.length,
               raw: w,
+              phraseSpan: wordResult.phrase_span ?? 1,
               suggestions: wordResult.suggestions.map((s) => ({
                 word: s.word,
                 dist: s.distance ?? s.dist,
@@ -198,10 +201,19 @@ export default function Checker() {
     setActiveSuggestion(null);
   };
 
-  /** Replace one token with a suggestion; clears analysis so user can Run Analysis again. */
-  const applySuggestion = (wordIndex, replacement, originalRaw) => {
+  /** Replace one or more consecutive tokens (hybrid phrase) with a suggestion, then re-run analysis. */
+  const applySuggestion = async (wordIndex, replacement, originalRaw, phraseSpan = 1) => {
     if (wordIndex == null || wordIndex < 0) return;
-    const bounds = getWordChunkBounds(text, wordIndex);
+    const span = Number(phraseSpan) > 1 ? Number(phraseSpan) : 1;
+    let bounds;
+    if (span > 1) {
+      const first = getWordChunkBounds(text, wordIndex);
+      const last = getWordChunkBounds(text, wordIndex + span - 1);
+      if (!first || !last) return;
+      bounds = { start: first.start, end: last.end, raw: text.slice(first.start, last.end) };
+    } else {
+      bounds = getWordChunkBounds(text, wordIndex);
+    }
     if (!bounds) return;
     const raw = originalRaw ?? bounds.raw;
     const cased = adjustCaseToMatchOriginal(replacement, raw);
@@ -210,18 +222,16 @@ export default function Checker() {
     setActiveSuggestion(null);
     setSelectedWord(null);
     setSelectedWordIndex(null);
-    setResults([]);
-    setAnalytics(null);
-    setLanguage(null);
-    setLatencyMs(null);
+    await runAnalysis(newText);
   };
 
   const replaceWordFromPopup = (newWord) => {
     if (!activeSuggestion) return;
-    applySuggestion(
+    void applySuggestion(
       activeSuggestion.wordIndex,
       newWord,
-      activeSuggestion.raw
+      activeSuggestion.raw,
+      activeSuggestion.phraseSpan ?? 1
     );
   };
 
@@ -354,7 +364,7 @@ export default function Checker() {
         </div>
         {results.length > 0 && (
           <p style={{ fontSize: 12, color: '#666', marginTop: 6, marginBottom: 0 }}>
-            Green = correct, orange = has suggestion, red = incorrect. Click a word for POS and suggestions; choose a suggestion to replace it in your text (sidebar or popup), then run Analysis again to refresh.
+            Green = correct, orange = has suggestion, red = incorrect. Click a word for POS and suggestions; choosing a suggestion updates your text and refreshes analysis automatically so you can correct multiple words in a row.
           </p>
         )}
 
@@ -625,10 +635,15 @@ export default function Checker() {
                         </div>
                         <button
                           type="button"
-                          onClick={() =>
-                            selectedWordIndex != null &&
-                            applySuggestion(selectedWordIndex, s.word, selectedWord.word)
-                          }
+                          onClick={() => {
+                            if (selectedWordIndex == null) return;
+                            void applySuggestion(
+                              selectedWordIndex,
+                              s.word,
+                              selectedWord.word,
+                              selectedWord.phrase_span ?? 1
+                            );
+                          }}
                           disabled={selectedWordIndex == null}
                           style={{
                             padding: '6px 14px',

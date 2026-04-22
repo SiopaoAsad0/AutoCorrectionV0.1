@@ -557,6 +557,80 @@ td {
   line-height: 1.5;
 }
 
+.landing-contact {
+  margin-top: 48px;
+  padding: 32px 0 8px;
+  border-top: 1px solid rgba(0, 112, 60, 0.12);
+}
+
+.landing-contact-title {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  color: #122018;
+  text-align: center;
+}
+
+.landing-contact-lead {
+  margin: 0 auto 24px;
+  max-width: 520px;
+  text-align: center;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: #4a5c52;
+}
+
+.landing-contact-form {
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.landing-contact-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #3d4f46;
+}
+
+.landing-contact-label input,
+.landing-contact-label textarea {
+  font: inherit;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #d4e0d8;
+  background: var(--white);
+  color: #122018;
+}
+
+.landing-contact-label textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.landing-contact-label input:focus,
+.landing-contact-label textarea:focus {
+  outline: none;
+  border-color: var(--pnc-green);
+  box-shadow: 0 0 0 3px rgba(0, 112, 60, 0.12);
+}
+
+.landing-contact-error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #b00020;
+}
+
+.landing-contact-success {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--pnc-green);
+  font-weight: 600;
+}
+
 .landing-footer {
   padding: 20px 28px;
   text-align: center;
@@ -568,4 +642,19 @@ td {
 
 .landing-footer p {
   margin: 0;
+}
+
+.landing-footer-meta {
+  margin-top: 10px !important;
+}
+
+.landing-footer-link {
+  color: #6b7a72;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.landing-footer-link:hover {
+  color: var(--pnc-green);
+  text-decoration: underline;
 }
