@@ -58,6 +58,35 @@ class SpellCorrectionService
             $dictPos = $entry?->pos;
             $language = $entry?->language;
 
+            // High-priority single-token normalizations (e.g. diko -> hindi ko) should still trigger
+            // even when the source token exists in the dictionary.
+            $directSingleTarget = $directCorrections[$normalized] ?? null;
+            if (! $isPhraseHead && is_string($directSingleTarget) && $directSingleTarget !== '') {
+                $normalizedTarget = $this->normalizeSuggestionTarget($directSingleTarget);
+                if ($normalizedTarget !== '' && $normalizedTarget !== $normalized) {
+                    $targetEntry = $this->dictionary->find($normalizedTarget);
+                    $targetPos = $targetEntry?->pos ?? $this->posTagging->tag($directSingleTarget, null);
+                    $contextScore = $this->contextAwareness->scoreCandidate($tokens, $i, $directSingleTarget, $targetPos);
+                    $wordResults[] = [
+                        'word' => $raw,
+                        'normalized' => $normalized,
+                        'status' => 'suggested',
+                        'pos' => $this->posTagging->tag($normalized, $dictPos),
+                        'suggestions' => [[
+                            'word' => $directSingleTarget,
+                            'distance' => 0.0,
+                            'pos' => $targetPos,
+                            'frequency' => $targetEntry ? (int) $targetEntry->frequency + 1000 : 1000,
+                            'context_score' => $contextScore,
+                            'error_breakdown' => $this->levenshtein->editBreakdown($normalized, $directSingleTarget),
+                        ]],
+                        'distance' => 0.0,
+                        'language' => $language,
+                    ];
+                    continue;
+                }
+            }
+
             $protectedLexeme = ! $isPhraseHead && $entry === null && $this->learnedVocabulary->isProtected($normalized);
             if ($protectedLexeme) {
                 $wordResults[] = [

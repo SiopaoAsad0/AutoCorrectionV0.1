@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dictionary;
+use App\Services\Dictionary\DatasetSnapshotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,10 @@ use Symfony\Component\HttpFoundation\Response;
 class AdminDictionaryController extends Controller
 {
     private const INSERT_CHUNK = 600;
+
+    public function __construct(
+        private DatasetSnapshotService $datasetSnapshot
+    ) {}
 
     public function datasets(Request $request): JsonResponse
     {
@@ -101,6 +106,8 @@ class AdminDictionaryController extends Controller
             throw $e;
         }
 
+        $this->syncDatasetSnapshot();
+
         return response()->json($row, Response::HTTP_CREATED);
     }
 
@@ -122,6 +129,7 @@ class AdminDictionaryController extends Controller
         }
 
         $dictionary->update($data);
+        $this->syncDatasetSnapshot();
 
         return response()->json($dictionary->fresh());
     }
@@ -129,6 +137,7 @@ class AdminDictionaryController extends Controller
     public function destroy(Dictionary $dictionary): JsonResponse
     {
         $dictionary->delete();
+        $this->syncDatasetSnapshot();
 
         return response()->json(['message' => 'Deleted.']);
     }
@@ -171,6 +180,8 @@ class AdminDictionaryController extends Controller
         if ($batch !== []) {
             $inserted += $this->insertIgnoreCount($batch);
         }
+
+        $this->syncDatasetSnapshot();
 
         return response()->json(['inserted_rows' => $inserted]);
     }
@@ -240,7 +251,18 @@ class AdminDictionaryController extends Controller
             $inserted += $this->insertIgnoreCount($batch);
         }
 
+        $this->syncDatasetSnapshot();
+
         return response()->json(['inserted_rows' => $inserted, 'path' => $relative]);
+    }
+
+    private function syncDatasetSnapshot(): void
+    {
+        try {
+            $this->datasetSnapshot->syncFromDatabase();
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     private function insertIgnoreCount(array $batch): int

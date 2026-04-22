@@ -70,6 +70,9 @@ class DictionarySeeder extends Seeder
             'taglish',
             self::TAGLISH_EXTRA_FREQUENCY
         );
+
+        // Load user-curated dictionary snapshot (committable JSON) so pull + seed restores datasets.
+        $this->seedCustomSnapshot();
     }
 
     /**
@@ -194,6 +197,61 @@ class DictionarySeeder extends Seeder
         $lower = mb_strtolower($raw);
 
         return preg_replace('/[^\p{L}\p{N}\'-]/u', '', $lower) ?? '';
+    }
+
+    private function seedCustomSnapshot(): void
+    {
+        $path = base_path('database/seeders/data/custom_dictionary_dataset.json');
+        if (! is_readable($path)) {
+            return;
+        }
+
+        $raw = file_get_contents($path);
+        if (! is_string($raw) || trim($raw) === '') {
+            return;
+        }
+
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            return;
+        }
+
+        $now = now()->toDateTimeString();
+        $batch = [];
+
+        foreach ($decoded as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $word = $this->normalizeLexeme((string) ($row['word'] ?? ''));
+            $language = (string) ($row['language'] ?? '');
+            if ($word === '' || ! in_array($language, ['english', 'tagalog', 'taglish'], true)) {
+                continue;
+            }
+            $pos = isset($row['pos']) && is_string($row['pos']) && $row['pos'] !== '' ? $row['pos'] : null;
+            $frequency = (int) ($row['frequency'] ?? 1);
+            if ($frequency < 1) {
+                $frequency = 1;
+            }
+
+            $batch[] = [
+                'word' => $word,
+                'language' => $language,
+                'pos' => $pos,
+                'frequency' => $frequency,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            if (count($batch) >= self::INSERT_CHUNK) {
+                DB::table('dictionaries')->insertOrIgnore($batch);
+                $batch = [];
+            }
+        }
+
+        if ($batch !== []) {
+            DB::table('dictionaries')->insertOrIgnore($batch);
+        }
     }
 
     private function correctWordFromTypoCorpusLine(string $line): ?string
@@ -322,6 +380,7 @@ class DictionarySeeder extends Seeder
             ['word' => 'ng', 'language' => 'tagalog', 'pos' => 'Particle', 'frequency' => 10],
             ['word' => 'talaga', 'language' => 'tagalog', 'pos' => 'Adverb', 'frequency' => 9],
             ['word' => 'kasi', 'language' => 'tagalog', 'pos' => 'Conjunction', 'frequency' => 9],
+            ['word' => 'alam', 'language' => 'tagalog', 'pos' => 'Verb', 'frequency' => 10],
             ['word' => 'buti', 'language' => 'tagalog', 'pos' => 'Adverb', 'frequency' => 8],
             ['word' => 'na', 'language' => 'tagalog', 'pos' => 'Particle', 'frequency' => 10],
             ['word' => 'mabilis', 'language' => 'tagalog', 'pos' => 'Adjective', 'frequency' => 7],
