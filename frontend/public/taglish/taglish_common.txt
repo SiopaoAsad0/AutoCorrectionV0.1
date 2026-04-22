@@ -29,6 +29,8 @@ mag-compute
 mag-post
 mag-share
 mag-stream
+magla-login
+mag-u-update
 magchat
 magchatgpt
 magcode

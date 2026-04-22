@@ -18,6 +18,29 @@ function adjustCaseToMatchOriginal(suggestion, originalRaw) {
   return s;
 }
 
+/** Convert API candidate into safe display/insertable text. */
+function normalizeCandidateWord(candidate) {
+  if (typeof candidate === 'string') {
+    const w = candidate.trim();
+    return /^\[object object\]$/i.test(w) ? '' : w;
+  }
+  if (candidate && typeof candidate === 'object') {
+    if (typeof candidate.word === 'string') {
+      const w = candidate.word.trim();
+      return /^\[object object\]$/i.test(w) ? '' : w;
+    }
+    if (typeof candidate.lexeme === 'string') {
+      const w = candidate.lexeme.trim();
+      return /^\[object object\]$/i.test(w) ? '' : w;
+    }
+    if (typeof candidate.replacement === 'string') {
+      const w = candidate.replacement.trim();
+      return /^\[object object\]$/i.test(w) ? '' : w;
+    }
+  }
+  return '';
+}
+
 /** Nth word token in text (split like the highlighter); returns start/end in full string. */
 function getWordChunkBounds(fullText, targetWordIndex) {
   const parts = fullText.split(/(\s+)/u);
@@ -50,10 +73,28 @@ function getPOSClass(pos) {
   if (p.includes('determiner')) return 'pos-determiner';
   if (p.includes('interjection')) return 'pos-interjection';
   if (p.includes('particle')) return 'pos-particle';
+  if (p.includes('grammar')) return 'pos-grammar';
   return 'pos-default';
 }
 
 /** Short description of POS for legend */
+/** Grammar span from API (word indices). */
+function grammarIssueForIndex(grammarIssues, idx) {
+  if (!grammarIssues?.length) return null;
+  return (
+    grammarIssues.find((g) => idx >= g.start_word_index && idx <= g.end_word_index) ?? null
+  );
+}
+
+/** Mirror / table highlight: grammar (purple) when spelling is OK but rules fire. */
+function highlightStatus(res, idx, grammarIssues) {
+  const g = grammarIssueForIndex(grammarIssues, idx);
+  if (g && (res.status === 'correct' || res.status === 'suggested')) {
+    return 'grammar';
+  }
+  return res.status || 'misspelled';
+}
+
 const POS_LEGEND = [
   { tag: 'Noun', desc: 'thing, place, person' },
   { tag: 'Verb', desc: 'action or state' },
@@ -77,6 +118,8 @@ export default function Checker() {
   const [selectedWord, setSelectedWord] = useState(null);
   const [selectedWordIndex, setSelectedWordIndex] = useState(null);
   const [activeSuggestion, setActiveSuggestion] = useState(null);
+  const [grammarIssues, setGrammarIssues] = useState([]);
+  const [predictions, setPredictions] = useState([]);
   const textareaRef = useRef(null);
   const mirrorRef = useRef(null);
   const navigate = useNavigate();
@@ -88,6 +131,40 @@ export default function Checker() {
       navigate('/login', { replace: true });
     }
   }, [navigate]);
+
+  useEffect(() => {
+    const t = text.trim();
+    if (t.length < 2) {
+      setPredictions([]);
+      return;
+    }
+    const id = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/predict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ text: t }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const cleaned = (data.predictions || [])
+          .map((p) => {
+            const word = normalizeCandidateWord(p);
+            if (!word) return null;
+            return {
+              word,
+              score: typeof p?.score === 'number' ? p.score : 0,
+              source: typeof p?.source === 'string' ? p.source : 'predict',
+            };
+          })
+          .filter(Boolean);
+        setPredictions(cleaned);
+      } catch {
+        setPredictions([]);
+      }
+    }, 380);
+    return () => clearTimeout(id);
+  }, [text]);
 
   const syncScroll = () => {
     if (textareaRef.current && mirrorRef.current) {
@@ -103,8 +180,10 @@ export default function Checker() {
   const mirrorContent = canHighlight
     ? chunks.map((chunk, i) => {
         if (chunk.trim() === '') return chunk;
-        const res = results[wordIndex++];
-        const status = res?.status || 'misspelled';
+        const idx = wordIndex;
+        wordIndex += 1;
+        const res = results[idx];
+        const status = highlightStatus(res || {}, idx, grammarIssues);
         return (
           <span key={i} className={`word-status-inline status-${status}`}>
             {chunk}
@@ -115,10 +194,17 @@ export default function Checker() {
 
   /** @param {string} [textOverride] analyze this text instead of current `text` state (keeps highlights in sync after replacements). */
   const runAnalysis = async (textOverride) => {
-    const source = textOverride !== undefined ? textOverride : text;
+    // Never treat click events / objects as text (onClick={runAnalysis} passes a MouseEvent).
+    const source = typeof textOverride === 'string' ? textOverride : text;
     const trimmed = String(source).trim();
     if (!trimmed) {
       setError('Please enter some text.');
+      setResults([]);
+      setGrammarIssues([]);
+      setPredictions([]);
+      setAnalytics(null);
+      setLanguage(null);
+      setLatencyMs(null);
       return;
     }
     setError(null);
@@ -135,12 +221,15 @@ export default function Checker() {
       }
       const data = await res.json();
       setResults(data.words || []);
+      setGrammarIssues(data.grammar_issues || []);
       setAnalytics(data.analytics || null);
       setLanguage(data.language || null);
       setLatencyMs(data.processing_time_ms ?? null);
     } catch (err) {
       setError(err.message || 'Analysis failed. Is the Laravel backend running on port 8000?');
       setResults([]);
+      setGrammarIssues([]);
+      setPredictions([]);
       setAnalytics(null);
       setLanguage(null);
       setLatencyMs(null);
@@ -154,6 +243,7 @@ export default function Checker() {
     const s = status.toLowerCase();
     if (s === 'correct') return 'Correct';
     if (s === 'suggested') return 'Suggested';
+    if (s === 'grammar') return 'Grammar';
     return 'Incorrect';
   };
 
@@ -173,7 +263,31 @@ export default function Checker() {
         if (wordResult) {
           setSelectedWord(wordResult);
           setSelectedWordIndex(wordIdx);
-          if (wordResult.suggestions && wordResult.suggestions.length > 0) {
+          const g = grammarIssueForIndex(grammarIssues, wordIdx);
+          const spellSugs = (wordResult.suggestions || [])
+            .map((s) => {
+              const word = normalizeCandidateWord(s.word);
+              if (!word) return null;
+              return {
+                word,
+                dist: s.distance ?? s.dist,
+                pos: s.pos ?? 'Unknown',
+                grammar: false,
+              };
+            })
+            .filter(Boolean);
+          if (g) {
+            const replacementWord = normalizeCandidateWord(g.replacement);
+            if (replacementWord) {
+            spellSugs.unshift({
+              word: replacementWord,
+              dist: 0,
+              pos: 'Grammar',
+              grammar: true,
+            });
+            }
+          }
+          if (spellSugs.length > 0) {
             const rect = textareaRef.current.getBoundingClientRect();
             setActiveSuggestion({
               wordIndex: wordIdx,
@@ -181,11 +295,7 @@ export default function Checker() {
               end: currentPos + w.length,
               raw: w,
               phraseSpan: wordResult.phrase_span ?? 1,
-              suggestions: wordResult.suggestions.map((s) => ({
-                word: s.word,
-                dist: s.distance ?? s.dist,
-                pos: s.pos ?? 'Unknown',
-              })),
+              suggestions: spellSugs,
               x: Math.min(e.clientX - rect.left, rect.width - 200),
               y: e.clientY - rect.top + 10,
             });
@@ -204,6 +314,8 @@ export default function Checker() {
   /** Replace one or more consecutive tokens (hybrid phrase) with a suggestion, then re-run analysis. */
   const applySuggestion = async (wordIndex, replacement, originalRaw, phraseSpan = 1) => {
     if (wordIndex == null || wordIndex < 0) return;
+    const replacementText = normalizeCandidateWord(replacement);
+    if (!replacementText) return;
     const span = Number(phraseSpan) > 1 ? Number(phraseSpan) : 1;
     let bounds;
     if (span > 1) {
@@ -216,12 +328,20 @@ export default function Checker() {
     }
     if (!bounds) return;
     const raw = originalRaw ?? bounds.raw;
-    const cased = adjustCaseToMatchOriginal(replacement, raw);
+    const cased = adjustCaseToMatchOriginal(replacementText, raw);
     const newText = text.slice(0, bounds.start) + cased + text.slice(bounds.end);
     setText(newText);
     setActiveSuggestion(null);
     setSelectedWord(null);
     setSelectedWordIndex(null);
+    const lex = String(replacementText).toLowerCase().trim().slice(0, 191);
+    if (lex.length >= 2) {
+      void fetch(`${API_BASE}/api/vocabulary/learn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ lexeme: lex }),
+      }).catch(() => {});
+    }
     await runAnalysis(newText);
   };
 
@@ -364,8 +484,72 @@ export default function Checker() {
         </div>
         {results.length > 0 && (
           <p style={{ fontSize: 12, color: '#666', marginTop: 6, marginBottom: 0 }}>
-            Green = correct, orange = has suggestion, red = incorrect. Click a word for POS and suggestions; choosing a suggestion updates your text and refreshes analysis automatically so you can correct multiple words in a row.
+            Green = correct, orange = spelling suggestion, purple = grammar rule, red = misspelled. Predictions
+            update as you type; accepting a suggestion records vocabulary for ranking (local learning).
           </p>
+        )}
+
+        {predictions.length > 0 && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: '10px 12px',
+              background: '#f4f0fc',
+              borderRadius: 10,
+              border: '1px solid #e0d4f0',
+            }}
+          >
+            <small style={{ color: '#555', fontWeight: 700 }}>Next word</small>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              {predictions.map((p, pi) => (
+                <button
+                  key={pi}
+                  type="button"
+                  onClick={() => {
+                    const t = text;
+                    const sep = t.length > 0 && !/\s$/u.test(t) ? ' ' : '';
+                    const nextWord = normalizeCandidateWord(p.word);
+                    if (!nextWord) return;
+                    setText(t + sep + nextWord + ' ');
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 20,
+                    border: '1px solid #c4b5e0',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    color: '#4527a0',
+                  }}
+                >
+                  {p.word}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {grammarIssues.length > 0 && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: 12,
+              background: '#faf5ff',
+              borderRadius: 10,
+              border: '1px solid #e1bee7',
+              fontSize: 13,
+            }}
+          >
+            <strong style={{ color: '#6a1b9a' }}>Grammar hints ({grammarIssues.length})</strong>
+            <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+              {grammarIssues.map((g, gi) => (
+                <li key={gi} style={{ marginBottom: 6 }}>
+                  <span style={{ color: '#333' }}>{g.message}</span>{' '}
+                  <code style={{ background: '#eee', padding: '1px 6px', borderRadius: 4 }}>{g.replacement}</code>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {error && (
@@ -394,7 +578,7 @@ export default function Checker() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={runAnalysis}
+            onClick={() => void runAnalysis()}
             disabled={loading}
           >
             {loading ? 'Analyzing…' : 'Run Analysis'}
@@ -405,6 +589,8 @@ export default function Checker() {
             onClick={() => {
               setText('');
               setResults([]);
+              setGrammarIssues([]);
+              setPredictions([]);
               setAnalytics(null);
               setLanguage(null);
               setError(null);
@@ -430,7 +616,9 @@ export default function Checker() {
           </thead>
           <tbody>
             <AnimatePresence>
-              {results.map((res, i) => (
+              {results.map((res, i) => {
+                const disp = highlightStatus(res, i, grammarIssues);
+                return (
                 <motion.tr
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -451,15 +639,17 @@ export default function Checker() {
                   <td
                     style={{
                       color:
-                        res.status === 'correct'
+                        disp === 'correct'
                           ? 'green'
-                          : res.status === 'suggested'
+                          : disp === 'suggested'
                             ? 'orange'
-                            : 'red',
+                            : disp === 'grammar'
+                              ? '#6f42c1'
+                              : 'red',
                       fontWeight: 'bold',
                     }}
                   >
-                    {normalizeStatus(res.status)}
+                    {normalizeStatus(disp)}
                   </td>
                   <td>
                     <span className={`pos-badge ${getPOSClass(res.pos)}`}>
@@ -467,7 +657,8 @@ export default function Checker() {
                     </span>
                   </td>
                 </motion.tr>
-              ))}
+              );
+              })}
             </AnimatePresence>
           </tbody>
         </motion.table>
@@ -514,6 +705,12 @@ export default function Checker() {
                 <>
                   {' '}
                   &nbsp;|&nbsp; <strong>Latency:</strong> {latencyMs} ms
+                </>
+              )}
+              {typeof analytics.grammar_issue_count === 'number' && analytics.grammar_issue_count > 0 && (
+                <>
+                  {' '}
+                  &nbsp;|&nbsp; <strong>Grammar hints:</strong> {analytics.grammar_issue_count}
                 </>
               )}
             </p>
@@ -611,6 +808,27 @@ export default function Checker() {
                 {(!selectedWord.pos || selectedWord.pos === 'Unknown') && 'Part of speech could not be determined.'}
               </p>
             </div>
+            {selectedWordIndex != null && grammarIssueForIndex(grammarIssues, selectedWordIndex) && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: 10,
+                  background: '#faf5ff',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  border: '1px solid #e1bee7',
+                }}
+              >
+                <strong style={{ color: '#6a1b9a' }}>Grammar</strong>
+                <p style={{ margin: '6px 0', color: '#333' }}>
+                  {grammarIssueForIndex(grammarIssues, selectedWordIndex).message}
+                </p>
+                <small style={{ color: '#666' }}>
+                  Suggested fix:{' '}
+                  <strong>{grammarIssueForIndex(grammarIssues, selectedWordIndex).replacement}</strong>
+                </small>
+              </div>
+            )}
             {selectedWord.suggestions && selectedWord.suggestions.length > 0 && (
               <div style={{ marginTop: 12 }}>
                 <small style={{ color: '#999' }}>Suggestions — click Replace to swap in the text:</small>

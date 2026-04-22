@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::post('/correct', [SpellController::class, 'correct']);
+Route::post('/predict', [SpellController::class, 'predict']);
+Route::post('/vocabulary/learn', [SpellController::class, 'learnLexeme']);
 Route::post('/contact', [ContactController::class, 'store']);
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);

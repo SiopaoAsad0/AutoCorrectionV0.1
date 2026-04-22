@@ -433,6 +433,8 @@ class DictionarySeeder extends Seeder
             ['word' => 'mag-co-compute', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
             ['word' => 'mag-code', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
             ['word' => 'nag-code', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'magla-login', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 5],
+            ['word' => 'mag-u-update', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 5],
         ];
     }
 }

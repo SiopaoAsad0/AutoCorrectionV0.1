@@ -50,6 +50,11 @@ return [
         'scoreko' => 'score ko',
         'mag co compute' => 'mag-co-compute',
         'mag co-compute' => 'mag-co-compute',
+        'mag la login' => 'magla-login',
+        'mag la-login' => 'magla-login',
+        'mag la login muna ako' => 'magla-login muna ako',
+        'mag u update' => 'mag-u-update',
+        'mag u-update' => 'mag-u-update',
         'magco compute' => 'mag-co-compute',
         'co compute' => 'co-compute',
         'coompute' => 'compute',
@@ -255,6 +260,42 @@ return [
         'grbe' => 'grabe',
         'actvty' => 'activity',
         'net' => 'internet',
+    ],
+
+    /*
+    | Learned lexemes: after this many accepts (POST /api/vocabulary/learn), treat as dictionary-correct.
+    */
+    'learned_lexeme_auto_accept_min' => (int) env('SPELLING_LEARNED_MIN', 5),
+
+    /*
+    | Never flag these as misspellings (informal / Gen slang). Pair with user learning API.
+    */
+    'accepted_slang_lexemes' => [
+        'rizz', 'fr', 'frfr', 'bet', 'gyat', 'aura', 'npc', 'sigma', 'skibidi', 'slay', 'bussin',
+        'drip', 'delulu', 'nocap', 'lowkey', 'highkey', 'brainrot', 'cap', 'based', 'cooked',
+        'sus', 'stan', 'vibe', 'vibing', 'yeet', 'flex', 'itsgiving', 'iykyk', 'fyp', 'mewing', 'mid',
+        'simp', 'cringe', 'goated', 'lit', 'sheesh', 'unc', 'ohio',
+    ],
+
+    /*
+    | Heuristic next-word prediction (last-token and multi-token tail). LM/transformer can replace this later.
+    */
+    'prediction_seeds' => [
+        'the' => ['mall', 'store', 'office', 'school', 'park', 'bank', 'hospital', 'library', 'market', 'party'],
+        'to' => ['the', 'sleep', 'eat', 'see', 'work', 'school', 'home', 'a', 'go', 'be', 'fix'],
+        'a' => ['lot', 'bit', 'little', 'friend', 'good', 'great', 'new', 'big', 'small', 'few'],
+        'i' => ['am', 'was', 'have', 'will', 'think', 'need', 'want', 'like', 'know', 'can'],
+        'ng' => ['grades', 'bahay', 'school', 'expenses', 'total', 'project', 'assignment', 'exam', 'pera', 'oras'],
+        'ako' => ['ay', 'lang', 'rin', 'din', 'muna', 'na', 'pa', 'ng'],
+    ],
+    'prediction_bigrams' => [
+        'going to the' => ['mall', 'store', 'office', 'school', 'park', 'party', 'beach'],
+        'going to a' => ['party', 'meeting', 'wedding', 'concert', 'restaurant', 'doctor'],
+        'mag co compute ako ng' => ['grades', 'expenses', 'total', 'assignment', 'project'],
+        'mag co-compute ako ng' => ['grades', 'expenses', 'total', 'assignment', 'project'],
+        'co compute ako ng' => ['grades', 'expenses', 'total', 'assignment', 'project'],
+        'compute ako ng' => ['grades', 'expenses', 'total', 'assignment', 'project'],
+        'ako ng' => ['grades', 'bahay', 'school', 'assignment', 'pera', 'oras', 'ginagawa'],
     ],
 
     /*

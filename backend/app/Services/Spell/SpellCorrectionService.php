@@ -12,7 +12,8 @@ class SpellCorrectionService
         private LanguageDetectionService $languageDetection,
         private SentenceAnalyticsService $analytics,
         private ThesaurusService $thesaurus,
-        private ContextAwarenessService $contextAwareness
+        private ContextAwarenessService $contextAwareness,
+        private LearnedVocabularyService $learnedVocabulary
     ) {}
 
     /**
@@ -56,6 +57,21 @@ class SpellCorrectionService
             $entry = $this->dictionary->find($normalized);
             $dictPos = $entry?->pos;
             $language = $entry?->language;
+
+            $protectedLexeme = ! $isPhraseHead && $entry === null && $this->learnedVocabulary->isProtected($normalized);
+            if ($protectedLexeme) {
+                $wordResults[] = [
+                    'word' => $raw,
+                    'normalized' => $normalized,
+                    'status' => 'correct',
+                    'pos' => $this->posTagging->tag($normalized, null),
+                    'suggestions' => [],
+                    'distance' => null,
+                    'language' => 'taglish',
+                    'learned_or_slang' => true,
+                ];
+                continue;
+            }
 
             if ($entry !== null && ! $isPhraseHead) {
                 $wordResults[] = [
