@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 
 class LearnedLexeme extends Model
 {
@@ -22,14 +23,19 @@ class LearnedLexeme extends Model
             $lexeme = mb_substr($lexeme, 0, 191);
         }
 
-        $row = static::firstOrNew(['lexeme' => $lexeme]);
-        if ($row->exists) {
-            $row->increment('frequency');
-        } else {
-            $row->frequency = 1;
-            $row->save();
-        }
+        try {
+            $row = static::firstOrNew(['lexeme' => $lexeme]);
+            if ($row->exists) {
+                $row->increment('frequency');
+            } else {
+                $row->frequency = 1;
+                $row->save();
+            }
 
-        return (int) $row->fresh()->frequency;
+            return (int) $row->fresh()->frequency;
+        } catch (QueryException) {
+            // Table may not exist yet on fresh pull before running migrations.
+            return 0;
+        }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Services\Spell;
 
 use App\Models\LearnedLexeme;
+use Illuminate\Database\QueryException;
 
 /**
  * User-approved / high-frequency learned terms and static slang allowlist.
@@ -23,9 +24,14 @@ class LearnedVocabularyService
             return false;
         }
 
-        return LearnedLexeme::query()
-            ->where('lexeme', $normalized)
-            ->where('frequency', '>=', $min)
-            ->exists();
+        try {
+            return LearnedLexeme::query()
+                ->where('lexeme', $normalized)
+                ->where('frequency', '>=', $min)
+                ->exists();
+        } catch (QueryException) {
+            // Prevent analysis from crashing when migrations were not run yet.
+            return false;
+        }
     }
 }
