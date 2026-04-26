@@ -51,4 +51,31 @@ class DictionaryService
         }
         return $out;
     }
+
+    /**
+     * Frequent words fallback for broad next-word prediction.
+     *
+     * @return array<int, array{word: string, language: string, pos: ?string, frequency: int}>
+     */
+    public function getTopFrequent(array $languages, int $limit = 20): array
+    {
+        $rows = Dictionary::query()
+            ->whereIn('language', $languages)
+            ->where('frequency', '>', 0)
+            ->orderByDesc('frequency')
+            ->limit($limit)
+            ->get();
+
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = [
+                'word' => $row->word,
+                'language' => $row->language,
+                'pos' => $row->pos,
+                'frequency' => (int) $row->frequency,
+            ];
+        }
+
+        return $out;
+    }
 }

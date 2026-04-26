@@ -108,6 +108,7 @@ const POS_LEGEND = [
 ];
 
 export default function Checker() {
+  const MAX_INPUT_WORDS = 500;
   const [text, setText] = useState('');
   const [results, setResults] = useState([]);
   const [analytics, setAnalytics] = useState(null);
@@ -175,6 +176,7 @@ export default function Checker() {
 
   const chunks = text.split(/(\s+)/u);
   const wordCount = chunks.filter((c) => c.trim() !== '').length;
+  const isWordLimitReached = wordCount >= MAX_INPUT_WORDS;
   const canHighlight = results.length > 0 && results.length === wordCount;
   let wordIndex = 0;
   const mirrorContent = canHighlight
@@ -401,7 +403,12 @@ export default function Checker() {
             rows="6"
             value={text}
             onChange={(e) => {
-              setText(e.target.value);
+              const nextValue = e.target.value;
+              const nextWords = nextValue.trim() === '' ? [] : nextValue.trim().split(/\s+/u);
+              if (nextWords.length > MAX_INPUT_WORDS) {
+                return;
+              }
+              setText(nextValue);
               setActiveSuggestion(null);
               setSelectedWordIndex(null);
             }}
@@ -410,6 +417,25 @@ export default function Checker() {
             className="textarea-with-highlight"
             placeholder="Type here. Run Analysis to check spelling. Click words to see part of speech..."
           />
+          <div className="textarea-meta-row">
+            <div className="highlight-legend">
+              <span className="legend-item">
+                <span className="legend-dot dot-correct" />
+                correct
+              </span>
+              <span className="legend-item">
+                <span className="legend-dot dot-suggested" />
+                suggest
+              </span>
+              <span className="legend-item">
+                <span className="legend-dot dot-error" />
+                error words
+              </span>
+            </div>
+            <span className={`word-counter ${isWordLimitReached ? 'is-limit' : ''}`}>
+              {wordCount}/{MAX_INPUT_WORDS}
+            </span>
+          </div>
           <AnimatePresence>
             {activeSuggestion && (
               <motion.div

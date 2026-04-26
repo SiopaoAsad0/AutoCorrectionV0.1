@@ -30,7 +30,16 @@ class TokenizationService
 
     public function normalizeWord(string $word): string
     {
-        $lower = mb_strtolower($word);
-        return preg_replace('/[^\p{L}\p{N}\'-]/u', '', $lower);
+        $lower = mb_strtolower($this->normalizeApostrophes($word));
+        return preg_replace('/[^\p{L}\p{N}\'-]/u', '', $lower) ?? '';
+    }
+
+    private function normalizeApostrophes(string $word): string
+    {
+        return str_replace(
+            ["\u{2019}", "\u{2018}", "\u{02BC}", "\u{2032}", '`'],
+            "'",
+            $word
+        );
     }
 }

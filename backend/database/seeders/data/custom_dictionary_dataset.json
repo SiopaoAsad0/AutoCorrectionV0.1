@@ -1,1 +1,26 @@
-
+[
+  { "word": "didn't", "language": "english", "pos": "Verb", "frequency": 14 },
+  { "word": "don't", "language": "english", "pos": "Verb", "frequency": 14 },
+  { "word": "can't", "language": "english", "pos": "Verb", "frequency": 14 },
+  { "word": "won't", "language": "english", "pos": "Verb", "frequency": 13 },
+  { "word": "isn't", "language": "english", "pos": "Verb", "frequency": 13 },
+  { "word": "aren't", "language": "english", "pos": "Verb", "frequency": 13 },
+  { "word": "wasn't", "language": "english", "pos": "Verb", "frequency": 12 },
+  { "word": "weren't", "language": "english", "pos": "Verb", "frequency": 12 },
+  { "word": "hasn't", "language": "english", "pos": "Verb", "frequency": 12 },
+  { "word": "haven't", "language": "english", "pos": "Verb", "frequency": 12 },
+  { "word": "hadn't", "language": "english", "pos": "Verb", "frequency": 12 },
+  { "word": "i'm", "language": "english", "pos": "Pronoun", "frequency": 14 },
+  { "word": "i've", "language": "english", "pos": "Pronoun", "frequency": 13 },
+  { "word": "i'll", "language": "english", "pos": "Pronoun", "frequency": 13 },
+  { "word": "you're", "language": "english", "pos": "Pronoun", "frequency": 13 },
+  { "word": "we're", "language": "english", "pos": "Pronoun", "frequency": 13 },
+  { "word": "they're", "language": "english", "pos": "Pronoun", "frequency": 13 },
+  { "word": "it's", "language": "english", "pos": "Pronoun", "frequency": 14 },
+  { "word": "that's", "language": "english", "pos": "Pronoun", "frequency": 12 },
+  { "word": "didn't", "language": "taglish", "pos": "Verb", "frequency": 10 },
+  { "word": "don't", "language": "taglish", "pos": "Verb", "frequency": 10 },
+  { "word": "can't", "language": "taglish", "pos": "Verb", "frequency": 10 },
+  { "word": "i'm", "language": "taglish", "pos": "Pronoun", "frequency": 10 },
+  { "word": "you're", "language": "taglish", "pos": "Pronoun", "frequency": 10 }
+]

@@ -34,14 +34,15 @@ class SpellController extends Controller
         $started = microtime(true);
         $result = $this->spellCorrection->correct($text);
 
-        $grammarIssues = $this->grammarDetection->analyze($this->tokenization->tokenize($text));
+        $analysisText = (string) ($result['corrected_text'] ?? $text);
+        $grammarIssues = $this->grammarDetection->analyze($this->tokenization->tokenize($analysisText));
         $result['grammar_issues'] = $grammarIssues;
         $result['analytics'] = array_merge($result['analytics'] ?? [], [
             'grammar_issue_count' => count($grammarIssues),
         ]);
 
         if ($request->boolean('include_predictions')) {
-            $result['predictions'] = $this->nextWordPrediction->predict($text);
+            $result['predictions'] = $this->nextWordPrediction->predict($analysisText);
         }
 
         $result['engine'] = [
@@ -55,6 +56,7 @@ class SpellController extends Controller
         try {
             CorrectionLog::create([
                 'original_text' => $text,
+                'corrected_text' => $result['corrected_text'] ?? null,
                 'suggestions' => $result,
                 'analytics' => $result['analytics'] ?? null,
             ]);

@@ -34,4 +34,20 @@ class LearnedVocabularyService
             return false;
         }
     }
+
+    /**
+     * Record observed usage for unknown tokens to support adaptive lexicon growth.
+     */
+    public function recordUsage(string $normalized, int $minTokenLength = 3): int
+    {
+        $normalized = mb_strtolower(trim($normalized));
+        if ($normalized === '' || mb_strlen($normalized) < $minTokenLength) {
+            return 0;
+        }
+        if (preg_match('/^[\p{L}\p{N}\'-]+$/u', $normalized) !== 1) {
+            return 0;
+        }
+
+        return LearnedLexeme::bumpFrequency($normalized);
+    }
 }

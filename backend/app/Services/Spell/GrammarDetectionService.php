@@ -48,6 +48,13 @@ class GrammarDetectionService
             }
         }
 
+        if ($n > 0) {
+            $firstRaw = $tokens[0]['raw'] ?? '';
+            if (is_string($firstRaw) && $firstRaw !== '' && preg_match('/^\p{Ll}/u', $firstRaw) === 1) {
+                $add(0, 0, 'Start sentence with a capital letter.', mb_strtoupper(mb_substr($firstRaw, 0, 1)).mb_substr($firstRaw, 1), 'capitalization');
+            }
+        }
+
         for ($i = 0; $i < $n - 1; $i++) {
             if (($norm[$i] === 'dont' || $norm[$i] === "don't" || $norm[$i] === 'doesnt' || $norm[$i] === "doesn't") && $i + 1 < $n) {
                 $v = $norm[$i + 1];
@@ -62,6 +69,15 @@ class GrammarDetectionService
                 if ($fixed !== null) {
                     $add($i + 1, $i + 1, 'After don\'t / doesn\'t, use the base form of the verb.', $fixed, 'bare_infinitive');
                 }
+            }
+        }
+
+        for ($i = 0; $i < $n; $i++) {
+            if ($norm[$i] === 'goodmorning') {
+                $add($i, $i, 'Standard greeting uses separate words.', 'good morning', 'word_spacing');
+            }
+            if ($norm[$i] === 'maam') {
+                $add($i, $i, 'Add apostrophe for the standard form.', "ma'am", 'apostrophe');
             }
         }
 
