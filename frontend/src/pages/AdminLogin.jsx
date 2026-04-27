@@ -61,7 +61,7 @@ export default function AdminLogin() {
           <input
             type="text"
             autoComplete="username"
-            placeholder="Admin email (from .env ADMIN_EMAIL)"
+            placeholder="Admin email or username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />

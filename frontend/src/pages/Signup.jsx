@@ -16,6 +16,7 @@ export default function Signup() {
     lastName: '',
     middleName: '',
     id: '',
+    email: '',
     section: '',
     password: '',
   });
@@ -35,8 +36,8 @@ export default function Signup() {
   };
 
   const handleSignUp = async () => {
-    if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.id || !formData.section || !formData.password) {
-      alert("Please fill in all required fields (First name, Last name, Student ID, Section, Password).");
+    if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.id || !formData.email || !formData.section || !formData.password) {
+      alert("Please fill in all required fields (First name, Last name, Student ID, Email, Section, Password).");
       return;
     }
     if (formData.password.length < 6) {
@@ -57,6 +58,7 @@ export default function Signup() {
         lastName: formData.lastName.trim(),
         middleName: formData.middleName.trim(),
         id: formData.id,
+        email: formData.email.trim(),
         section: formData.section,
         totalChecks: 0,
         passwordHash,
@@ -111,6 +113,15 @@ export default function Signup() {
               placeholder="Student ID (e.g., 2023-12345)" 
               value={formData.id}
               onChange={(e) => setFormData({...formData, id: e.target.value})} 
+            />
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <input
+              type="email"
+              placeholder="Email address"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
             />
           </motion.div>
 

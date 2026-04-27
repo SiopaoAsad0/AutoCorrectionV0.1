@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminContactController;
 use App\Http\Controllers\AdminDictionaryController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\SpellController;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ Route::post('/correct', [SpellController::class, 'correct']);
 Route::post('/predict', [SpellController::class, 'predict']);
 Route::post('/vocabulary/learn', [SpellController::class, 'learnLexeme']);
 Route::post('/contact', [ContactController::class, 'store']);
+Route::get('/contact/messages', [ContactController::class, 'index']);
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 
@@ -30,6 +32,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/datasets', [AdminDictionaryController::class, 'datasets']);
     Route::get('/dictionary', [AdminDictionaryController::class, 'index']);
     Route::post('/dictionary', [AdminDictionaryController::class, 'store']);
+    Route::get('/users', [AdminUserController::class, 'index']);
     Route::put('/dictionary/{dictionary}', [AdminDictionaryController::class, 'update']);
     Route::delete('/dictionary/{dictionary}', [AdminDictionaryController::class, 'destroy']);
     Route::post('/dictionary/import', [AdminDictionaryController::class, 'importLines']);

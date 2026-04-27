@@ -15,39 +15,52 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const handleLogin = async () => {
+    setError(null);
+
     if (!studentId || !password) {
-      alert('Please enter both Student ID and password.');
+      setError('Please enter both Student ID and password.');
       return;
     }
+
+    // Admin credentials are authenticated via the dedicated admin endpoint/page.
+    if (studentId.trim().toLowerCase() === 'admin') {
+      setError('Admin account must sign in on the admin login page.');
+      navigate('/admin/login');
+      return;
+    }
+
     setLoading(true);
     try {
       const savedData = localStorage.getItem('student_' + studentId);
       if (!savedData) {
-        alert('Access Denied: Student ID not recognized.');
+        setError('Access denied: Student ID not recognized.');
         return;
       }
       let student;
       try {
         student = JSON.parse(savedData);
-      } catch {
-        alert('Invalid account data. Please register again.');
+      } catch (parseError) {
+        setError('Invalid account data. Please register again.');
         return;
       }
       if (!student.passwordHash) {
-        alert('This account was created before password login. Please register again to set a password.');
+        setError('This account was created before password login. Please register again to set a password.');
         return;
       }
       const passwordHash = await hashPassword(password);
       if (student.passwordHash !== passwordHash) {
-        alert('Access Denied: Incorrect password.');
+        setError('Access denied: Incorrect password.');
         return;
       }
       localStorage.setItem('isLoggedIn', 'true');
       localStorage.setItem('pnc_user', studentId);
       navigate('/checker');
+    } catch (loginError) {
+      setError('Login failed unexpectedly. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -97,10 +110,18 @@ export default function Login() {
           >
             {loading ? 'Signing in...' : 'Login to Checker'}
           </motion.button>
+          {error && (
+            <div style={{ color: '#c00', fontSize: 13, marginTop: 10 }}>{error}</div>
+          )}
         </div>
         
         <p style={{ marginTop: '20px' }}>
           New participant? <Link to="/signup" style={{ color: '#00703c', fontWeight: 'bold' }}>Register here</Link>
+        </p>
+        <p style={{ marginTop: '8px' }}>
+          <Link to="/" style={{ color: '#00703c', fontWeight: 'bold' }}>
+            ← Back to home
+          </Link>
         </p>
       </div>
     </motion.div>

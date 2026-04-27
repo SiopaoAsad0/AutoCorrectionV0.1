@@ -129,6 +129,12 @@ export default function AdminMessages() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <Link to="/admin/users" style={{ color: '#00703c', fontWeight: 700 }}>
+            Users
+          </Link>
+          <Link to="/admin/dictionary/add" style={{ color: '#00703c', fontWeight: 700 }}>
+            Add Word
+          </Link>
           <button type="button" onClick={() => load()} disabled={loading} style={{ background: '#6c757d', width: 'auto' }}>
             Refresh
           </button>

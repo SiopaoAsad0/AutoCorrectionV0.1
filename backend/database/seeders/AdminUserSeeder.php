@@ -12,7 +12,7 @@ class AdminUserSeeder extends Seeder
     {
         $email = env('ADMIN_EMAIL', 'Admin');
         $password = env('ADMIN_PASSWORD', '123123');
-        $name = env('ADMIN_NAME', 'Dictionary Admin');
+        $name = env('ADMIN_NAME', 'Ryan Dales');
 
         User::updateOrCreate(
             ['email' => $email],

@@ -17,7 +17,11 @@ class AdminAuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+        $loginValue = trim($credentials['email']);
+        $user = User::query()
+            ->where('email', $loginValue)
+            ->orWhere('name', $loginValue)
+            ->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([

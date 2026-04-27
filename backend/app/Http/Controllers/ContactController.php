@@ -8,6 +8,31 @@ use Illuminate\Http\Request;
 
 class ContactController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+        ]);
+
+        $items = ContactMessage::query()
+            ->where('email', $data['email'])
+            ->orderBy('created_at')
+            ->get([
+                'id',
+                'name',
+                'email',
+                'message',
+                'admin_reply',
+                'replied_at',
+                'created_at',
+                'updated_at',
+            ]);
+
+        return response()->json([
+            'data' => $items,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([

@@ -18,6 +18,9 @@ export default function Navbar() {
       <Link to="/profile" style={{ textDecoration: 'none', color: '#00703c', fontWeight: 'bold' }}>
         MY PROFILE
       </Link>
+      <Link to="/messages" style={{ textDecoration: 'none', color: '#00703c', fontWeight: 'bold' }}>
+        CONTACT US
+      </Link>
     </nav>
   );
 }
