@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ContactMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 
 class ContactController extends Controller
 {
@@ -14,19 +15,28 @@ class ContactController extends Controller
             'email' => ['required', 'email', 'max:255'],
         ]);
 
-        $items = ContactMessage::query()
-            ->where('email', $data['email'])
-            ->orderBy('created_at')
-            ->get([
-                'id',
-                'name',
-                'email',
-                'message',
-                'admin_reply',
-                'replied_at',
-                'created_at',
-                'updated_at',
-            ]);
+        try {
+            $items = ContactMessage::query()
+                ->where('email', $data['email'])
+                ->orderBy('created_at')
+                ->get([
+                    'id',
+                    'name',
+                    'email',
+                    'message',
+                    'admin_reply',
+                    'replied_at',
+                    'created_at',
+                    'updated_at',
+                ]);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '42S02' || str_contains(strtolower($e->getMessage()), 'contact_messages')) {
+                return response()->json([
+                    'message' => 'Database is not initialized. Run "php artisan migrate --seed" in backend.',
+                ], 503);
+            }
+            throw $e;
+        }
 
         return response()->json([
             'data' => $items,
@@ -41,11 +51,20 @@ class ContactController extends Controller
             'message' => ['required', 'string', 'max:5000'],
         ]);
 
-        $msg = ContactMessage::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'message' => $data['message'],
-        ]);
+        try {
+            $msg = ContactMessage::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'message' => $data['message'],
+            ]);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '42S02' || str_contains(strtolower($e->getMessage()), 'contact_messages')) {
+                return response()->json([
+                    'message' => 'Database is not initialized. Run "php artisan migrate --seed" in backend.',
+                ], 503);
+            }
+            throw $e;
+        }
 
         return response()->json([
             'id' => $msg->id,
