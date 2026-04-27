@@ -21,7 +21,14 @@ From `backend` folder:
    - `composer run setup-db`
    - or `php artisan migrate --seed`
 
+Default config now uses SQLite for easier setup (`DB_CONNECTION=sqlite`), so MySQL is not required for teammates.
+
 ## Important note
 
 Seeders insert data, but table structure is created by migrations.
 So to avoid missing-table errors, always run migrations after pulling new changes.
+
+## Run servers
+
+- Backend API: `php artisan serve`
+- Frontend: run `npm run dev` inside `frontend`

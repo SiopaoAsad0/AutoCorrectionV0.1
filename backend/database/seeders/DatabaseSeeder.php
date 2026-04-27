@@ -16,6 +16,9 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             DictionarySeeder::class,
             LearnedLexemeSeeder::class,
+            ContactMessageSeeder::class,
+            CorrectionLogSeeder::class,
+            TypoPatternSeeder::class,
         ]);
     }
 }

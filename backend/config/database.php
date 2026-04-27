@@ -38,7 +38,17 @@ return [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DATABASE_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'database' => (static function (): string {
+                $database = env('DB_DATABASE', database_path('database.sqlite'));
+                if ($database === ':memory:') {
+                    return $database;
+                }
+                if (preg_match('/^(\/|[A-Za-z]:[\\\\\\/])/', $database) === 1) {
+                    return $database;
+                }
+
+                return base_path($database);
+            })(),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],
