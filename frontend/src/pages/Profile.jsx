@@ -78,7 +78,11 @@ export default function Profile() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="btn-secondary"
-            onClick={() => { localStorage.clear(); navigate('/login'); }}
+            onClick={() => {
+              localStorage.removeItem('isLoggedIn');
+              localStorage.removeItem('pnc_user');
+              navigate('/login');
+            }}
           >
             Logout System
           </motion.button>
