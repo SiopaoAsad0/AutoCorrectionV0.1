@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_BASE = ''; // use Vite proxy: /api -> Laravel
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /** Match suggestion casing to the original token (Title, ALL CAPS, or lower). */
 function adjustCaseToMatchOriginal(suggestion, originalRaw) {
