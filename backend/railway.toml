@@ -1,0 +1,6 @@
+[build]
+builder = "nixpacks"
+buildCommand = "composer install --no-dev && php artisan migrate --force && php artisan db:seed --force"
+
+[deploy]
+startCommand = "php artisan serve --host=0.0.0.0 --port=$PORT"
