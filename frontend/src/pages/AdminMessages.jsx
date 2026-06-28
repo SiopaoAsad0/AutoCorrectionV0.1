@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-const API_BASE = '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 function authHeaders() {
   const token = localStorage.getItem('admin_token');
@@ -128,12 +128,15 @@ export default function AdminMessages() {
             Submissions from the landing page &quot;Contact us&quot; form.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <Link to="/admin/users" style={{ color: '#00703c', fontWeight: 700 }}>
             Users
           </Link>
           <Link to="/admin/dictionary/add" style={{ color: '#00703c', fontWeight: 700 }}>
             Add Word
+          </Link>
+          <Link to="/admin/reports" style={{ color: '#7b1fa2', fontWeight: 700 }}>
+            📊 Reports
           </Link>
           <button type="button" onClick={() => load()} disabled={loading} style={{ background: '#6c757d', width: 'auto' }}>
             Refresh
