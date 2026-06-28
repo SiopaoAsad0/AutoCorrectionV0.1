@@ -9,6 +9,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminMessages from "./pages/AdminMessages";
 import AdminUsers from "./pages/AdminUsers";
 import AdminDictionaryAdd from "./pages/AdminDictionaryAdd";
+import AdminReports from "./pages/AdminReports";
 import Navbar from "./components/Navbar"; 
 
 // This helper component hides the Navbar on Auth pages
@@ -40,6 +41,7 @@ function App() {
           <Route path="/admin/messages" element={<AdminMessages />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/dictionary/add" element={<AdminDictionaryAdd />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
         </Routes>
       </Layout>
     </Router>
