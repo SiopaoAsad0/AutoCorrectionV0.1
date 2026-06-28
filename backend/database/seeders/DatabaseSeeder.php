@@ -12,13 +12,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
-            AdminUserSeeder::class,
-            DictionarySeeder::class,
-            LearnedLexemeSeeder::class,
-            ContactMessageSeeder::class,
-            CorrectionLogSeeder::class,
-            TypoPatternSeeder::class,
-        ]);
+      $this->call([
+    AdminUserSeeder::class,
+    DictionarySeeder::class,
+    MissingWordsDictionarySeeder::class,  // ← add this line
+    LearnedLexemeSeeder::class,
+    ContactMessageSeeder::class,
+    CorrectionLogSeeder::class,
+    TypoPatternSeeder::class,
+]);
     }
 }
