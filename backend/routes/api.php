@@ -1,14 +1,13 @@
 <?php
-
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminContactController;
 use App\Http\Controllers\AdminDictionaryController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\SpellController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -17,15 +16,13 @@ use Illuminate\Support\Facades\Route;
 Route::post('/correct', [SpellController::class, 'correct']);
 Route::post('/predict', [SpellController::class, 'predict']);
 Route::post('/vocabulary/learn', [SpellController::class, 'learnLexeme']);
+Route::post('/compare', [SpellController::class, 'compare']);
 Route::post('/contact', [ContactController::class, 'store']);
 Route::get('/contact/messages', [ContactController::class, 'index']);
-
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
-
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::post('/logout', [AdminAuthController::class, 'logout']);
     Route::get('/me', [AdminAuthController::class, 'me']);
@@ -39,4 +36,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('/dictionary/import-dataset', [AdminDictionaryController::class, 'importDataset']);
     Route::get('/contact-messages', [AdminContactController::class, 'index']);
     Route::post('/contact-messages/{contactMessage}/reply', [AdminContactController::class, 'reply']);
+    Route::get('/reports/overview', [ReportController::class, 'overview']);
+    Route::get('/reports/users', [ReportController::class, 'users']);
+    Route::post('/reports/compare', [ReportController::class, 'comparePair']);
 });
