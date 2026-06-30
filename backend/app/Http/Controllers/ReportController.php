@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\Spell\JaroWinklerService;
 use App\Services\Spell\AdaptedLevenshteinService;
 use App\Models\SpellCheckLog;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
@@ -20,6 +21,8 @@ class ReportController extends Controller
      */
     public function overview()
     {
+        $registeredUsers = User::count();
+
         $logs = SpellCheckLog::selectRaw('
             COUNT(*) as total_checks,
             SUM(total_words) as total_words,
@@ -46,7 +49,8 @@ class ReportController extends Controller
             misspelled_word,
             COUNT(*) as frequency,
             AVG(levenshtein_distance) as avg_lev_distance,
-            AVG(jaro_winkler_similarity) as avg_jw_similarity
+            AVG(jaro_winkler_similarity) as avg_jw_similarity,
+            AVG(CASE WHEN suggestion_confidence IS NOT NULL THEN suggestion_confidence END) as avg_confidence
         ')
         ->whereNotNull('misspelled_word')
         ->groupBy('misspelled_word')
@@ -65,6 +69,7 @@ class ReportController extends Controller
         ->first();
 
         return response()->json([
+            'registered_users'     => $registeredUsers,
             'overview'             => $logs,
             'daily_trend'          => $dailyTrend,
             'top_misspelled'       => $topMisspelled,
