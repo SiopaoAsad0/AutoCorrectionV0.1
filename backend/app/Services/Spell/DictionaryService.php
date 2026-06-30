@@ -26,16 +26,28 @@ class DictionaryService
     /**
      * Get candidate words for suggestions (length within tolerance).
      *
+     * Candidates are ordered by length-proximity to the source word first,
+     * since that is the strongest cheap predictor of low edit distance —
+     * frequency is only used as a secondary tiebreaker among candidates of
+     * equal length-proximity. This avoids excluding rare-but-close words
+     * in favor of common-but-distant ones before SpellCorrectionService
+     * ever gets a chance to compute real Levenshtein distance on them.
+     *
      * @return array<int, array{word: string, language: string, pos: ?string, frequency: int}>
      */
     public function getCandidates(string $normalizedWord, int $lengthTolerance, int $maxCandidates): array
     {
         $len = mb_strlen($normalizedWord);
         $tolerance = config('spelling.length_tolerance', $lengthTolerance);
-        $limit = $maxCandidates * 5;
+
+        // Pull a much wider pool than before. The old `* 5` multiplier
+        // (with frequency-first ordering) meant close-but-rare words could
+        // be excluded here before distance scoring ever ran upstream.
+        $limit = max($maxCandidates * 20, 200);
 
         $rows = Dictionary::whereIn('language', $this->languages)
             ->lengthWithin($len, $tolerance)
+            ->orderByRaw('ABS(LENGTH(word) - ?) ASC', [$len])
             ->orderByDesc('frequency')
             ->limit($limit)
             ->get();
@@ -49,6 +61,7 @@ class DictionaryService
                 'frequency' => (int) $row->frequency,
             ];
         }
+
         return $out;
     }
 
