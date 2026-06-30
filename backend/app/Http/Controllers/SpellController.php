@@ -130,6 +130,7 @@ class SpellController extends Controller
                 $wordRows[] = array_merge($baseLog, [
                     'misspelled_word'          => $wordResult['normalized'] ?? $wordResult['word'],
                     'suggested_word'           => $topSuggestion['word'] ?? null,
+                    'suggestion_confidence'    => $topSuggestion['confidence'] ?? null,                      
                     'levenshtein_distance'     => $topSuggestion['distance'] ?? null,
                     'levenshtein_normalized'   => $comparison['levenshtein_normalized'] ?? null,
                     'jaro_winkler_similarity'  => $comparison['jaro_winkler_similarity'] ?? null,
