@@ -346,16 +346,17 @@ class SpellCorrectionService
                 $minCandidateConfidence,
                 $minContextProbability
             );
-            foreach ($suggestions as $idx => $row) {
-                $target = $row['compare_word'] ?? $row['word'];
-                $breakdown = $this->levenshtein->editBreakdown($normalized, $target);
-                unset($row['compare_word']);
-                unset($row['rank_score']);
-                unset($row['semantic_score']);
-                unset($row['confidence']);
-                $row['error_breakdown'] = $breakdown;
-                $suggestions[$idx] = $row;
-            }
+           foreach ($suggestions as $idx => $row) {
+    $target = $row['compare_word'] ?? $row['word'];
+    $breakdown = $this->levenshtein->editBreakdown($normalized, $target);
+    unset($row['compare_word']);
+    unset($row['rank_score']);
+    unset($row['semantic_score']);
+    // confidence intentionally retained — needed by SpellController for
+    // the API response and SpellCheckLog reporting.
+    $row['error_breakdown'] = $breakdown;
+    $suggestions[$idx] = $row;
+}
             $minDistance = $suggestions[0]['distance'] ?? null;
 
             if (count($suggestions) === 0 && $tokenFrequencies[$normalized] >= $autoLearnUsageThreshold) {
