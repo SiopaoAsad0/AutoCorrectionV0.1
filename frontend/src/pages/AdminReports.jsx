@@ -1,494 +1,662 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// ── tiny helpers ──────────────────────────────────────────────────────────────
-const pct = (v) => (v == null ? '—' : `${(v * 100).toFixed(1)}%`);
-const num = (v) => (v == null ? '—' : Number(v).toLocaleString());
-const dec = (v, d = 4) => (v == null ? '—' : Number(v).toFixed(d));
+function authHeaders() {
+  const token = localStorage.getItem('admin_token');
+  return {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
-function StatCard({ label, value, sub, accent }) {
+const pct  = (v) => (v == null ? '—' : `${(Number(v) * 100).toFixed(1)}%`);
+const num  = (v) => (v == null ? '—' : Number(v).toLocaleString());
+const dec  = (v, d = 3) => (v == null ? '—' : Number(v).toFixed(d));
+const date = (v) => (v ? new Date(v).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
+
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+const G = {
+  green:      '#00703c',
+  greenLight: '#e8f5ee',
+  greenMid:   '#c8e6d6',
+  gold:       '#ffcc00',
+  goldLight:  '#fff8d6',
+  red:        '#dc3545',
+  redLight:   '#fdf0f1',
+  purple:     '#6f42c1',
+  purpleLight:'#f1ecfc',
+  blue:       '#0277bd',
+  blueLight:  '#e3f2fd',
+  orange:     '#e65100',
+  orangeLight:'#fff3e0',
+  text:       '#1a2e24',
+  textMid:    '#4a5c52',
+  textMuted:  '#8a9e94',
+  border:     '#e0ebe4',
+  bg:         '#f5f7f6',
+  white:      '#ffffff',
+};
+
+/* ── Shared components ─────────────────────────────────────────────────────── */
+function KPI({ label, value, sub, color = G.green, icon }) {
   return (
     <div style={{
-      background: '#fff',
+      background: G.white,
       borderRadius: 14,
-      padding: '22px 24px',
-      borderLeft: `5px solid ${accent || 'var(--pnc-green)'}`,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
-      minWidth: 160,
+      padding: '20px 22px',
+      borderTop: `4px solid ${color}`,
+      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
       flex: 1,
+      minWidth: 150,
     }}>
-      <div style={{ fontSize: 13, color: '#888', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: '#1a2e24' }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>{sub}</div>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ fontSize: 12, color: G.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+          {label}
+        </div>
+        {icon && <span style={{ fontSize: 18, opacity: 0.35 }}>{icon}</span>}
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: G.text, lineHeight: 1.1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 12, color: G.textMuted, marginTop: 5 }}>{sub}</div>}
     </div>
   );
 }
 
-function SectionTitle({ children }) {
+function SectionHead({ children }) {
   return (
-    <h3 style={{ margin: '32px 0 14px', color: 'var(--pnc-green)', fontWeight: 800, fontSize: 16, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '2px solid #e8f5e9', paddingBottom: 8 }}>
-      {children}
-    </h3>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      margin: '32px 0 16px', paddingBottom: 10,
+      borderBottom: `2px solid ${G.border}`,
+    }}>
+      <div style={{ width: 4, height: 18, background: G.green, borderRadius: 2 }} />
+      <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+        {children}
+      </h3>
+    </div>
   );
 }
 
-function Badge({ value, max, label, color }) {
+function Bar({ label, value, max, color = G.green, suffix = '' }) {
   const pctVal = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 5, color: G.text }}>
         <span style={{ fontWeight: 600 }}>{label}</span>
-        <span style={{ color: '#666' }}>{num(value)}</span>
+        <span style={{ color: G.textMuted, fontWeight: 700 }}>{num(value)}{suffix}</span>
       </div>
-      <div style={{ background: '#f0f0f0', borderRadius: 99, height: 8, overflow: 'hidden' }}>
+      <div style={{ background: G.bg, borderRadius: 99, height: 7, overflow: 'hidden' }}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pctVal}%` }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          style={{ background: color || 'var(--pnc-green)', height: '100%', borderRadius: 99 }}
+          transition={{ duration: 0.9, ease: 'easeOut' }}
+          style={{ background: color, height: '100%', borderRadius: 99 }}
         />
       </div>
     </div>
   );
 }
 
-// ── Algorithm Comparison Tool ─────────────────────────────────────────────────
-function AlgorithmCompareTool() {
+function Chip({ children, color = G.green, bg }) {
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '3px 11px',
+      borderRadius: 99,
+      fontSize: 12,
+      fontWeight: 700,
+      background: bg || `${color}18`,
+      color,
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function EmptyState({ message }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '40px 20px', color: G.textMuted, fontSize: 14 }}>
+      <div style={{ fontSize: 32, marginBottom: 10, opacity: 0.3 }}>📭</div>
+      {message}
+    </div>
+  );
+}
+
+/* ── Algorithm Compare Tool ────────────────────────────────────────────────── */
+function CompareTool() {
   const [source, setSource] = useState('');
   const [target, setTarget] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError]   = useState(null);
 
   const compare = async () => {
     if (!source.trim() || !target.trim()) return;
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const res = await fetch(`${API_BASE}/api/compare`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ source: source.trim(), target: target.trim() }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setResult(await res.json());
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
-  const meterStyle = (val, isGood) => ({
-    display: 'inline-block',
-    padding: '3px 10px',
-    borderRadius: 99,
-    fontSize: 13,
-    fontWeight: 700,
-    background: isGood ? '#e8f5e9' : '#fff3e0',
-    color: isGood ? '#2e7d32' : '#e65100',
-  });
+  const samples = [
+    ['recieve','receive'],['seperate','separate'],['definately','definitely'],
+    ['kumosta','kumusta'],['salamats','salamat'],['beleive','believe'],
+  ];
 
   return (
-    <div style={{ background: '#fff', borderRadius: 14, padding: 24, boxShadow: '0 4px 16px rgba(0,0,0,0.07)', marginBottom: 24 }}>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+    <div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
         <input
           value={source}
           onChange={e => setSource(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && compare()}
           placeholder="Misspelled word (e.g. recieve)"
-          style={{ flex: 1, minWidth: 140 }}
+          style={{ flex: 1, minWidth: 160, marginBottom: 0 }}
         />
         <input
           value={target}
           onChange={e => setTarget(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && compare()}
           placeholder="Correct word (e.g. receive)"
-          style={{ flex: 1, minWidth: 140 }}
+          style={{ flex: 1, minWidth: 160, marginBottom: 0 }}
         />
-        <button onClick={compare} disabled={loading} style={{ minWidth: 120 }}>
-          {loading ? 'Comparing…' : 'Compare'}
+        <button
+          onClick={compare}
+          disabled={loading || !source.trim() || !target.trim()}
+          style={{ minWidth: 120, height: 50 }}
+        >
+          {loading ? 'Comparing…' : 'Compare ↗'}
         </button>
       </div>
-      {error && <p style={{ color: '#c00', fontSize: 13 }}>{error}</p>}
-      {result && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
-            {/* Levenshtein */}
-            <div style={{ background: '#f8fdf9', borderRadius: 10, padding: 16, border: '1px solid #c8e6c9' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#888', textTransform: 'uppercase', marginBottom: 8 }}>Adapted Levenshtein</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#1a2e24' }}>{dec(result.levenshtein_distance, 2)}</div>
-              <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>edit distance</div>
-              <div style={{ marginTop: 10, fontSize: 13 }}>
-                Normalized: <span style={meterStyle(result.levenshtein_normalized <= 0.3, result.levenshtein_normalized <= 0.3)}>{dec(result.levenshtein_normalized, 4)}</span>
-              </div>
-              {result.edit_breakdown && (
-                <div style={{ marginTop: 10, fontSize: 12, color: '#666' }}>
-                  <div>Substitutions: <strong>{result.edit_breakdown.substitutions}</strong></div>
-                  <div>Insertions: <strong>{result.edit_breakdown.insertions}</strong></div>
-                  <div>Deletions: <strong>{result.edit_breakdown.deletions}</strong></div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+        {samples.map(([a, b], i) => (
+          <button
+            key={i}
+            onClick={() => { setSource(a); setTarget(b); setResult(null); }}
+            style={{ background: G.bg, color: G.textMid, fontSize: 12, padding: '5px 12px', minWidth: 'auto', height: 'auto', border: `1px solid ${G.border}` }}
+          >
+            {a} → {b}
+          </button>
+        ))}
+      </div>
+
+      {error && <p style={{ color: G.red, fontSize: 13, margin: '8px 0' }}>{error}</p>}
+
+      <AnimatePresence>
+        {result && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+              {/* Levenshtein */}
+              <div style={{ background: G.greenLight, borderRadius: 12, padding: 18, border: `1px solid ${G.greenMid}` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Adapted Levenshtein</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: G.text }}>{dec(result.levenshtein_distance, 2)}</div>
+                <div style={{ fontSize: 12, color: G.textMuted, marginBottom: 10 }}>edit distance</div>
+                <div style={{ fontSize: 13, color: G.textMid }}>Normalized: <strong>{dec(result.levenshtein_normalized, 4)}</strong></div>
+                {result.edit_breakdown && (
+                  <div style={{ marginTop: 10, fontSize: 12, color: G.textMid, lineHeight: 1.7 }}>
+                    <div>Sub: <strong>{result.edit_breakdown.substitutions}</strong> &nbsp; Ins: <strong>{result.edit_breakdown.insertions}</strong> &nbsp; Del: <strong>{result.edit_breakdown.deletions}</strong></div>
+                  </div>
+                )}
+                <div style={{ marginTop: 10 }}>
+                  <Chip color={result.lev_accepts ? G.green : G.orange} bg={result.lev_accepts ? G.greenLight : G.orangeLight}>
+                    {result.lev_accepts ? '✓ Accepts' : '✗ Rejects'}
+                  </Chip>
                 </div>
-              )}
-              <div style={{ marginTop: 10 }}>
-                <span style={{ ...meterStyle(result.lev_accepts, result.lev_accepts), fontSize: 12 }}>
-                  {result.lev_accepts ? '✓ Accepts match' : '✗ Rejects match'}
-                </span>
               </div>
-            </div>
 
-            {/* Jaro-Winkler */}
-            <div style={{ background: '#faf5ff', borderRadius: 10, padding: 16, border: '1px solid #e1bee7' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#888', textTransform: 'uppercase', marginBottom: 8 }}>Jaro-Winkler</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#4527a0' }}>{dec(result.jaro_winkler_similarity, 4)}</div>
-              <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>similarity score</div>
-              <div style={{ marginTop: 10, fontSize: 13 }}>
-                Jaro only: <span style={{ fontWeight: 700 }}>{dec(result.jaro_similarity, 4)}</span>
+              {/* Jaro-Winkler */}
+              <div style={{ background: G.purpleLight, borderRadius: 12, padding: 18, border: '1px solid #e1d5f5' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: G.purple, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Jaro-Winkler</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: G.text }}>{dec(result.jaro_winkler_similarity, 4)}</div>
+                <div style={{ fontSize: 12, color: G.textMuted, marginBottom: 10 }}>similarity score</div>
+                <div style={{ fontSize: 13, color: G.textMid }}>Jaro: <strong>{dec(result.jaro_similarity, 4)}</strong></div>
+                <div style={{ fontSize: 13, color: G.textMid }}>Distance: <strong>{dec(result.jaro_winkler_distance, 4)}</strong></div>
+                <div style={{ marginTop: 10 }}>
+                  <Chip color={result.jw_accepts ? G.purple : G.orange} bg={result.jw_accepts ? G.purpleLight : G.orangeLight}>
+                    {result.jw_accepts ? '✓ Accepts' : '✗ Rejects'}
+                  </Chip>
+                </div>
               </div>
-              <div style={{ fontSize: 13, marginTop: 4 }}>
-                Distance: <span style={{ fontWeight: 700 }}>{dec(result.jaro_winkler_distance, 4)}</span>
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <span style={{ ...meterStyle(result.jw_accepts, result.jw_accepts), fontSize: 12 }}>
-                  {result.jw_accepts ? '✓ Accepts match' : '✗ Rejects match'}
-                </span>
-              </div>
-            </div>
 
-            {/* Verdict */}
-            <div style={{ background: result.agreement ? '#e8f5e9' : '#fff3e0', borderRadius: 10, padding: 16, border: `1px solid ${result.agreement ? '#a5d6a7' : '#ffcc80'}` }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#888', textTransform: 'uppercase', marginBottom: 8 }}>Verdict</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: result.agreement ? '#2e7d32' : '#e65100' }}>
-                {result.agreement ? '✓ Algorithms Agree' : '⚠ Algorithms Disagree'}
-              </div>
-              <div style={{ marginTop: 12, fontSize: 13, color: '#555' }}>
-                Preferred for <strong>"{result.source}"</strong>:
-              </div>
-              <div style={{ marginTop: 4 }}>
-                <span style={{ padding: '4px 12px', borderRadius: 99, background: '#1a2e24', color: '#fff', fontSize: 13, fontWeight: 700 }}>
-                  {result.preferred_algorithm}
-                </span>
-              </div>
-              <div style={{ marginTop: 10, fontSize: 12, color: '#666' }}>
-                {result.preferred_algorithm === 'jaro-winkler'
-                  ? 'Short word — prefix similarity matters more'
-                  : 'Longer word — edit count is more meaningful'}
+              {/* Verdict */}
+              <div style={{
+                background: result.agreement ? G.greenLight : G.goldLight,
+                borderRadius: 12, padding: 18,
+                border: `1px solid ${result.agreement ? G.greenMid : '#ffe58a'}`,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: G.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Verdict</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: result.agreement ? G.green : G.orange, marginBottom: 12 }}>
+                  {result.agreement ? '✓ Algorithms agree' : '⚠ Algorithms disagree'}
+                </div>
+                <div style={{ fontSize: 12, color: G.textMid, marginBottom: 8 }}>Preferred algorithm:</div>
+                <Chip color={G.white} bg={G.green}>{result.preferred_algorithm}</Chip>
+                <div style={{ marginTop: 10, fontSize: 12, color: G.textMuted, lineHeight: 1.6 }}>
+                  {result.preferred_algorithm === 'jaro-winkler'
+                    ? 'Short word — prefix similarity is more meaningful here'
+                    : 'Longer word — edit count gives a clearer signal'}
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-// ── Main Report Page ──────────────────────────────────────────────────────────
+/* ── Main page ─────────────────────────────────────────────────────────────── */
+const TABS = [
+  { id: 'overview',   label: 'Overview' },
+  { id: 'algorithm',  label: 'Algorithm' },
+  { id: 'users',      label: 'Users' },
+  { id: 'misspelled', label: 'Top Errors' },
+  { id: 'compare',    label: 'Live Compare' },
+];
+
 export default function AdminReports() {
   const [overview, setOverview] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [users,    setUsers]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const [tab,      setTab]      = useState('overview');
   const navigate = useNavigate();
 
-  const adminToken = localStorage.getItem('admin_token');
-
-  useEffect(() => {
-    if (!adminToken) { navigate('/admin/login'); return; }
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchData = useCallback(async () => {
+    const token = localStorage.getItem('admin_token');
+    if (!token) { navigate('/admin/login', { replace: true }); return; }
+    setLoading(true); setError(null);
     try {
-      const headers = { Authorization: `Bearer ${adminToken}`, Accept: 'application/json' };
       const [ovRes, usRes] = await Promise.all([
-        fetch(`${API_BASE}/api/admin/reports/overview`, { headers }),
-        fetch(`${API_BASE}/api/admin/reports/users`, { headers }),
+        fetch(`${API_BASE}/api/admin/reports/overview`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/api/admin/reports/users`,    { headers: authHeaders() }),
       ]);
+      if (ovRes.status === 401 || ovRes.status === 403) {
+        localStorage.removeItem('admin_token');
+        navigate('/admin/login', { replace: true });
+        return;
+      }
       if (!ovRes.ok) throw new Error(`Overview: HTTP ${ovRes.status}`);
       const ovData = await ovRes.json();
       const usData = usRes.ok ? await usRes.json() : { users: [] };
       setOverview(ovData);
       setUsers(usData.users || []);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
+  }, [navigate]);
 
-  const ov = overview?.overview || {};
-  const algo = overview?.algorithm_comparison || {};
-  const topMisspelled = overview?.top_misspelled || [];
-  const dailyTrend = overview?.daily_trend || [];
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const tabs = ['overview', 'algorithm', 'users', 'misspelled', 'compare'];
-
-  const tabLabel = { overview: 'Overview', algorithm: 'Algorithm', users: 'Users', misspelled: 'Top Errors', compare: 'Live Compare' };
+  const ov            = overview?.overview             || {};
+  const algo          = overview?.algorithm_comparison || {};
+  const topMisspelled = overview?.top_misspelled       || [];
+  const dailyTrend    = overview?.daily_trend          || [];
+  const regUsers      = overview?.registered_users     ?? null;
 
   return (
-    <div style={{ maxWidth: 1100, margin: '40px auto', padding: '0 20px' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ margin: 0, color: 'var(--pnc-green)', fontWeight: 800, fontSize: 22 }}>📊 Data Report</h2>
-        <p style={{ color: '#666', marginTop: 6, marginBottom: 0 }}>System-wide spell check statistics and algorithm comparison</p>
-      </div>
+    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 20px 64px', fontFamily: "'Inter','Segoe UI',Roboto,sans-serif" }}>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 24, flexWrap: 'wrap' }}>
-        {tabs.map(tab => (
+      {/* ── Page header ── */}
+      <header style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        flexWrap: 'wrap', gap: 12,
+        borderBottom: `4px solid ${G.green}`,
+        paddingBottom: 16, marginBottom: 28,
+      }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+            Admin Panel
+          </div>
+          <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: G.text }}>Data Reports</h1>
+          <p style={{ margin: '5px 0 0', fontSize: 14, color: G.textMuted }}>
+            System-wide spell check statistics and algorithm comparison
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Link to="/admin/users"        style={{ color: G.green, fontWeight: 600, fontSize: 14 }}>Users</Link>
+          <Link to="/admin/messages"     style={{ color: G.green, fontWeight: 600, fontSize: 14 }}>Messages</Link>
+          <Link to="/admin/dictionary/add" style={{ color: G.green, fontWeight: 600, fontSize: 14 }}>Dictionary</Link>
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={fetchData}
+            style={{ minWidth: 'auto', height: 36, padding: '0 16px', fontSize: 13, background: G.greenLight, color: G.green, border: `1px solid ${G.greenMid}` }}
+          >
+            ↻ Refresh
+          </button>
+        </div>
+      </header>
+
+      {/* ── Tab bar ── */}
+      <div style={{
+        display: 'flex', gap: 4, flexWrap: 'wrap',
+        background: G.bg, borderRadius: 12, padding: 4,
+        marginBottom: 28, border: `1px solid ${G.border}`,
+      }}>
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
             style={{
-              background: activeTab === tab ? 'var(--pnc-green)' : '#f0f0f0',
-              color: activeTab === tab ? '#fff' : '#444',
-              border: 'none',
-              borderRadius: 8,
-              padding: '8px 18px',
-              fontWeight: 600,
-              fontSize: 13,
-              cursor: 'pointer',
-              minWidth: 'auto',
-              height: 'auto',
+              flex: 1, minWidth: 80,
+              height: 38, padding: '0 14px', fontSize: 13, fontWeight: 600,
+              background: tab === t.id ? G.white : 'transparent',
+              color: tab === t.id ? G.green : G.textMuted,
+              border: tab === t.id ? `1px solid ${G.border}` : '1px solid transparent',
+              borderRadius: 9,
+              boxShadow: tab === t.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+              transition: 'all 0.15s ease',
             }}
           >
-            {tabLabel[tab]}
+            {t.label}
           </button>
         ))}
-        <button onClick={fetchData} style={{ background: '#e8f5e9', color: 'var(--pnc-green)', marginLeft: 'auto', minWidth: 'auto', height: 'auto', padding: '8px 18px', fontSize: 13 }}>
-          ↻ Refresh
-        </button>
       </div>
 
-      {error && <div style={{ padding: 16, background: '#fee', color: '#c00', borderRadius: 10, marginBottom: 16 }}>{error}</div>}
+      {/* ── Error state ── */}
+      {error && (
+        <div style={{ padding: 14, background: G.redLight, color: G.red, borderRadius: 10, marginBottom: 20, fontSize: 14, border: `1px solid #f5c6cb` }}>
+          {error}
+        </div>
+      )}
 
+      {/* ── Loading state ── */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: '#888' }}>Loading report data…</div>
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: G.textMuted }}>
+          <div style={{ fontSize: 28, marginBottom: 10, opacity: 0.3 }}>⏳</div>
+          Loading report data…
+        </div>
       ) : (
-        <>
-          {/* ── OVERVIEW TAB ─────────────────────────────────── */}
-          {activeTab === 'overview' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
-                <StatCard label="Total Checks"    value={num(ov.total_checks)}    sub="spell check sessions" />
-                <StatCard label="Words Analyzed"  value={num(ov.total_words)}     sub="total words processed" accent="#7b1fa2" />
-                <StatCard label="Errors Found"    value={num(ov.total_misspelled)} sub="misspelled words"     accent="#e53935" />
-                <StatCard label="Unique Users"    value={num(ov.unique_users)}    sub="registered accounts"  accent="#0277bd" />
-              </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          >
 
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
-                <StatCard label="Avg Correction Rate" value={pct(ov.avg_correction_rate)} sub="words needing correction" accent="#f57c00" />
-                <StatCard label="Avg Word Error Rate" value={pct(ov.avg_wer)}             sub="WER across all sessions"  accent="#c62828" />
-                <StatCard label="Suggestions Given"   value={num(ov.total_suggested)}     sub="words with suggestions"   accent="#2e7d32" />
-              </div>
-
-              <SectionTitle>Daily Activity (Last 30 Days)</SectionTitle>
-              {dailyTrend.length === 0 ? (
-                <p style={{ color: '#aaa', fontSize: 14 }}>No activity data yet. Start using the spell checker to generate reports.</p>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Checks</th>
-                        <th>Errors Found</th>
-                        <th>Avg Correction Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dailyTrend.map((row, i) => (
-                        <tr key={i}>
-                          <td>{row.date}</td>
-                          <td>{num(row.checks)}</td>
-                          <td>{num(row.misspelled)}</td>
-                          <td>{pct(row.avg_correction_rate)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {/* ══ OVERVIEW ══════════════════════════════════════════════════ */}
+            {tab === 'overview' && (
+              <div>
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
+                  <KPI label="Registered Users"   value={num(regUsers)}           sub="total accounts"          color={G.blue}   icon="👤" />
+                  <KPI label="Spell Check Sessions" value={num(ov.total_checks)}  sub="times checker was run"   color={G.green}  icon="✔" />
+                  <KPI label="Words Analyzed"     value={num(ov.total_words)}     sub="total words processed"   color={G.purple} icon="📝" />
+                  <KPI label="Unique Users"        value={num(ov.unique_users)}   sub="users with logged checks" color={G.orange} icon="🧑" />
                 </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* ── ALGORITHM TAB ─────────────────────────────────── */}
-          {activeTab === 'algorithm' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <SectionTitle>Algorithm Performance Summary</SectionTitle>
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
-                <StatCard label="Avg Levenshtein Distance"   value={dec(algo.avg_lev_distance, 3)}  sub="lower = closer match"      accent="var(--pnc-green)" />
-                <StatCard label="Avg Jaro-Winkler Similarity" value={dec(algo.avg_jw_similarity, 4)} sub="higher = more similar"     accent="#7b1fa2" />
-                <StatCard label="Algorithm Agreements"        value={num(algo.agreements)}           sub={`of ${num(algo.total)} pairs`} accent="#0277bd" />
-              </div>
-
-              <SectionTitle>Algorithm Comparison Guide</SectionTitle>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginBottom: 24 }}>
-                <div style={{ background: '#f8fdf9', borderRadius: 12, padding: 20, border: '1px solid #c8e6c9' }}>
-                  <div style={{ fontWeight: 800, color: 'var(--pnc-green)', marginBottom: 10, fontSize: 15 }}>Adapted Levenshtein</div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#444', lineHeight: 1.8 }}>
-                    <li>Counts minimum edits (insert, delete, substitute)</li>
-                    <li>Distance of 0 = identical, higher = more different</li>
-                    <li>Accepts matches with distance ≤ 3</li>
-                    <li>Best for longer words (6+ characters)</li>
-                    <li>Weighted by Filipino phonetic patterns</li>
-                  </ul>
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 28 }}>
+                  <KPI label="Errors Found"        value={num(ov.total_misspelled)} sub="misspelled words"         color={G.red}    icon="✗" />
+                  <KPI label="Suggestions Given"   value={num(ov.total_suggested)}  sub="words with suggestions"   color={G.green}  icon="💡" />
+                  <KPI label="Avg Correction Rate" value={pct(ov.avg_correction_rate)} sub="words needing correction" color={G.orange} icon="%" />
+                  <KPI label="Avg Word Error Rate" value={pct(ov.avg_wer)}          sub="WER across all sessions"  color={G.red}    icon="📉" />
                 </div>
-                <div style={{ background: '#faf5ff', borderRadius: 12, padding: 20, border: '1px solid #e1bee7' }}>
-                  <div style={{ fontWeight: 800, color: '#7b1fa2', marginBottom: 10, fontSize: 15 }}>Jaro-Winkler</div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#444', lineHeight: 1.8 }}>
-                    <li>Measures character overlap and transpositions</li>
-                    <li>Score of 1.0 = identical, 0.0 = no similarity</li>
-                    <li>Accepts matches with similarity ≥ 0.75</li>
-                    <li>Best for short words (≤ 5 characters)</li>
-                    <li>Gives bonus for matching prefixes</li>
-                  </ul>
-                </div>
-                <div style={{ background: '#fff8e1', borderRadius: 12, padding: 20, border: '1px solid #ffe082' }}>
-                  <div style={{ fontWeight: 800, color: '#f57c00', marginBottom: 10, fontSize: 15 }}>When They Disagree</div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#444', lineHeight: 1.8 }}>
-                    <li>Short words: prefer Jaro-Winkler</li>
-                    <li>Long words: prefer Levenshtein</li>
-                    <li>Transpositions: Jaro-Winkler handles better</li>
-                    <li>Missing letters: Levenshtein handles better</li>
-                    <li>Both used together = higher accuracy</li>
-                  </ul>
-                </div>
-              </div>
 
-              <SectionTitle>Error Breakdown Distribution</SectionTitle>
-              <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 4px 16px rgba(0,0,0,0.07)' }}>
-                <p style={{ fontSize: 13, color: '#666', marginTop: 0 }}>Based on logged spell check sessions</p>
-                {algo.total > 0 ? (
-                  <>
-                    <Badge value={algo.agreements}              max={algo.total} label="Algorithm Agreement Rate"     color="var(--pnc-green)" />
-                    <Badge value={algo.total - algo.agreements} max={algo.total} label="Algorithm Disagreement Rate"  color="#e53935" />
-                  </>
+                {/* Word classification bar chart */}
+                <SectionHead>Word classification breakdown</SectionHead>
+                <div style={{ background: G.white, borderRadius: 14, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: `1px solid ${G.border}`, marginBottom: 24 }}>
+                  {(ov.total_words ?? 0) === 0 ? (
+                    <EmptyState message="Run some spell checks to generate breakdown data." />
+                  ) : (
+                    <>
+                      <Bar label="Correct words"    value={ov.total_correct}    max={ov.total_words} color={G.green} />
+                      <Bar label="Suggested words"  value={ov.total_suggested}  max={ov.total_words} color={G.orange} />
+                      <Bar label="Misspelled words" value={ov.total_misspelled} max={ov.total_words} color={G.red} />
+                      <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${G.border}`, display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: G.textMuted }}>
+                        <span><span style={{ color: G.green, fontWeight: 700 }}>■</span> Correct: {pct((ov.total_correct ?? 0) / (ov.total_words ?? 1))}</span>
+                        <span><span style={{ color: G.orange, fontWeight: 700 }}>■</span> Suggested: {pct((ov.total_suggested ?? 0) / (ov.total_words ?? 1))}</span>
+                        <span><span style={{ color: G.red, fontWeight: 700 }}>■</span> Misspelled: {pct((ov.total_misspelled ?? 0) / (ov.total_words ?? 1))}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <SectionHead>Daily activity — last 30 days</SectionHead>
+                {dailyTrend.length === 0 ? (
+                  <EmptyState message="No daily activity yet. Run the spell checker to generate trend data." />
                 ) : (
-                  <p style={{ color: '#aaa', fontSize: 14 }}>No algorithm comparison data yet. Use the spell checker to generate data.</p>
+                  <div style={{ overflowX: 'auto', background: G.white, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: `1px solid ${G.border}` }}>
+                    <table style={{ marginTop: 0 }}>
+                      <thead>
+                        <tr style={{ background: G.bg }}>
+                          <th style={{ color: G.green, padding: '12px 16px', textAlign: 'left', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
+                          <th style={{ color: G.green, padding: '12px 16px', textAlign: 'right', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Checks</th>
+                          <th style={{ color: G.green, padding: '12px 16px', textAlign: 'right', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Errors</th>
+                          <th style={{ color: G.green, padding: '12px 16px', textAlign: 'right', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Correction Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailyTrend.map((row, i) => (
+                          <tr key={i} style={{ borderTop: `1px solid ${G.border}` }}>
+                            <td style={{ padding: '11px 16px', fontWeight: 600, color: G.text, fontSize: 14 }}>{row.date}</td>
+                            <td style={{ padding: '11px 16px', textAlign: 'right', fontSize: 14 }}>{num(row.checks)}</td>
+                            <td style={{ padding: '11px 16px', textAlign: 'right', color: G.red, fontWeight: 700, fontSize: 14 }}>{num(row.misspelled)}</td>
+                            <td style={{ padding: '11px 16px', textAlign: 'right', fontSize: 14 }}>
+                              <Chip color={G.green}>{pct(row.avg_correction_rate)}</Chip>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
-            </motion.div>
-          )}
+            )}
 
-          {/* ── USERS TAB ─────────────────────────────────────── */}
-          {activeTab === 'users' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <SectionTitle>Registered User Activity</SectionTitle>
-              {users.length === 0 ? (
-                <p style={{ color: '#aaa', fontSize: 14 }}>No user activity logged yet.</p>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Email</th>
-                        <th>Total Checks</th>
-                        <th>Words Analyzed</th>
-                        <th>Errors Found</th>
-                        <th>Avg Correction Rate</th>
-                        <th>Avg WER</th>
-                        <th>Last Active</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map((u, i) => (
-                        <motion.tr key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
-                          <td style={{ color: '#aaa' }}>{i + 1}</td>
-                          <td style={{ fontWeight: 600 }}>{u.user_email}</td>
-                          <td>{num(u.total_checks)}</td>
-                          <td>{num(u.total_words)}</td>
-                          <td style={{ color: '#e53935', fontWeight: 600 }}>{num(u.total_misspelled)}</td>
-                          <td>{pct(u.avg_correction_rate)}</td>
-                          <td>{pct(u.avg_wer)}</td>
-                          <td style={{ fontSize: 12, color: '#888' }}>{u.last_active ? new Date(u.last_active).toLocaleDateString() : '—'}</td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {/* ══ ALGORITHM ═════════════════════════════════════════════════ */}
+            {tab === 'algorithm' && (
+              <div>
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 28 }}>
+                  <KPI label="Avg Levenshtein Distance"    value={dec(algo.avg_lev_distance, 3)}  sub="lower = closer match"      color={G.green}  icon="📐" />
+                  <KPI label="Avg Jaro-Winkler Similarity" value={dec(algo.avg_jw_similarity, 4)} sub="higher = more similar"     color={G.purple} icon="🔗" />
+                  <KPI label="Algorithm Agreements"        value={num(algo.agreements)}           sub={`of ${num(algo.total)} word pairs`} color={G.blue} icon="✓" />
+                  <KPI label="Lev Preferred Rate"          value={pct(algo.lev_preferred_rate)}   sub="when algorithms disagree"  color={G.orange} icon="🏆" />
                 </div>
-              )}
-            </motion.div>
-          )}
 
-          {/* ── MISSPELLED TAB ────────────────────────────────── */}
-          {activeTab === 'misspelled' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <SectionTitle>Most Frequently Misspelled Words</SectionTitle>
-              {topMisspelled.length === 0 ? (
-                <p style={{ color: '#aaa', fontSize: 14 }}>No error data logged yet.</p>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Misspelled Word</th>
-                        <th>Times Found</th>
-                        <th>Avg Levenshtein Distance</th>
-                        <th>Avg Jaro-Winkler Similarity</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topMisspelled.map((row, i) => (
-                        <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
-                          <td style={{ color: '#aaa' }}>{i + 1}</td>
-                          <td style={{ fontWeight: 700, color: '#e53935' }}>{row.misspelled_word}</td>
-                          <td>{num(row.frequency)}</td>
-                          <td>{dec(row.avg_lev_distance, 3)}</td>
-                          <td>
-                            <span style={{
-                              padding: '2px 10px',
-                              borderRadius: 99,
-                              fontSize: 12,
-                              fontWeight: 700,
-                              background: row.avg_jw_similarity >= 0.75 ? '#e8f5e9' : '#fff3e0',
-                              color: row.avg_jw_similarity >= 0.75 ? '#2e7d32' : '#e65100',
-                            }}>
-                              {dec(row.avg_jw_similarity, 4)}
-                            </span>
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <SectionHead>Agreement rate</SectionHead>
+                <div style={{ background: G.white, borderRadius: 14, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: `1px solid ${G.border}`, marginBottom: 28 }}>
+                  {(algo.total ?? 0) === 0 ? (
+                    <EmptyState message="No algorithm data yet. Use the spell checker to generate comparison data." />
+                  ) : (
+                    <>
+                      <Bar label="Both algorithms agree"     value={algo.agreements}              max={algo.total} color={G.green} />
+                      <Bar label="Algorithms disagree"       value={(algo.total - algo.agreements)} max={algo.total} color={G.red} />
+                      <div style={{ marginTop: 14, fontSize: 13, color: G.textMuted }}>
+                        Agreement rate: <strong style={{ color: G.green }}>{pct(algo.agreements / algo.total)}</strong> across {num(algo.total)} word pairs
+                      </div>
+                    </>
+                  )}
                 </div>
-              )}
-            </motion.div>
-          )}
 
-          {/* ── LIVE COMPARE TAB ──────────────────────────────── */}
-          {activeTab === 'compare' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <SectionTitle>Live Algorithm Comparison</SectionTitle>
-              <p style={{ fontSize: 13, color: '#666', marginTop: 0, marginBottom: 16 }}>
-                Enter any word pair to compare Adapted Levenshtein vs Jaro-Winkler side by side.
-              </p>
-              <AlgorithmCompareTool />
-
-              <SectionTitle>Sample Word Pairs to Try</SectionTitle>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {[
-                  ['recieve', 'receive'], ['seperate', 'separate'], ['definately', 'definitely'],
-                  ['accomodate', 'accommodate'], ['tommorrow', 'tomorrow'], ['beleive', 'believe'],
-                  ['occassion', 'occasion'], ['embarass', 'embarrass'], ['neccessary', 'necessary'],
-                  ['wierd', 'weird'], ['kalian', 'kailan'], ['salamats', 'salamat'],
-                ].map(([a, b], i) => (
-                  <button
-                    key={i}
-                    onClick={() => { setActiveTab('compare'); }}
-                    style={{ background: '#f0f4f8', color: '#333', fontSize: 12, padding: '6px 14px', minWidth: 'auto', height: 'auto', borderRadius: 8 }}
-                  >
-                    {a} → {b}
-                  </button>
-                ))}
+                <SectionHead>Algorithm guide</SectionHead>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 24 }}>
+                  {[
+                    {
+                      title: 'Adapted Levenshtein',
+                      color: G.green, bg: G.greenLight, border: G.greenMid,
+                      points: [
+                        'Counts minimum edits: insert, delete, substitute',
+                        'Distance 0 = identical; higher = more different',
+                        'Accepts candidates with distance ≤ 3',
+                        'Best for longer words (6+ characters)',
+                        'Weighted for Filipino phonetic patterns',
+                      ],
+                    },
+                    {
+                      title: 'Jaro-Winkler',
+                      color: G.purple, bg: G.purpleLight, border: '#e1d5f5',
+                      points: [
+                        'Measures character overlap and transpositions',
+                        'Score 1.0 = identical; 0.0 = completely different',
+                        'Accepts candidates with similarity ≥ 0.75',
+                        'Best for short words (≤ 5 characters)',
+                        'Bonus weight for matching prefixes',
+                      ],
+                    },
+                    {
+                      title: 'When they disagree',
+                      color: G.orange, bg: G.orangeLight, border: '#ffcc80',
+                      points: [
+                        'Short words → prefer Jaro-Winkler',
+                        'Long words → prefer Levenshtein',
+                        'Transpositions → Jaro-Winkler handles better',
+                        'Missing/extra letters → Levenshtein handles better',
+                        'Using both together raises overall accuracy',
+                      ],
+                    },
+                  ].map((card, i) => (
+                    <div key={i} style={{ background: card.bg, borderRadius: 14, padding: 20, border: `1px solid ${card.border}` }}>
+                      <div style={{ fontWeight: 800, color: card.color, marginBottom: 12, fontSize: 14 }}>{card.title}</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, color: G.textMid, fontSize: 13, lineHeight: 1.8 }}>
+                        {card.points.map((p, j) => <li key={j}>{p}</li>)}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </motion.div>
-          )}
-        </>
+            )}
+
+            {/* ══ USERS ═════════════════════════════════════════════════════ */}
+            {tab === 'users' && (
+              <div>
+                <SectionHead>Registered user activity</SectionHead>
+                {users.length === 0 ? (
+                  <EmptyState message="No user activity logged yet. Users must run the spell checker for records to appear here." />
+                ) : (
+                  <div style={{ overflowX: 'auto', background: G.white, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: `1px solid ${G.border}` }}>
+                    <table style={{ marginTop: 0 }}>
+                      <thead>
+                        <tr style={{ background: G.bg }}>
+                          {['#', 'Email', 'Sessions', 'Words', 'Errors', 'Avg Correction', 'Avg WER', 'Last active'].map((h, i) => (
+                            <th key={i} style={{ color: G.green, padding: '12px 14px', textAlign: i > 1 ? 'right' : 'left', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((u, i) => (
+                          <motion.tr
+                            key={i}
+                            initial={{ opacity: 0, x: -6 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.03 }}
+                            style={{ borderTop: `1px solid ${G.border}` }}
+                          >
+                            <td style={{ padding: '11px 14px', color: G.textMuted, fontSize: 13 }}>{i + 1}</td>
+                            <td style={{ padding: '11px 14px', fontWeight: 600, color: G.text, fontSize: 14 }}>{u.user_email}</td>
+                            <td style={{ padding: '11px 14px', textAlign: 'right', fontSize: 14 }}>{num(u.total_checks)}</td>
+                            <td style={{ padding: '11px 14px', textAlign: 'right', fontSize: 14 }}>{num(u.total_words)}</td>
+                            <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: 700, color: G.red, fontSize: 14 }}>{num(u.total_misspelled)}</td>
+                            <td style={{ padding: '11px 14px', textAlign: 'right', fontSize: 14 }}><Chip color={G.green}>{pct(u.avg_correction_rate)}</Chip></td>
+                            <td style={{ padding: '11px 14px', textAlign: 'right', fontSize: 14 }}><Chip color={G.red} bg={G.redLight}>{pct(u.avg_wer)}</Chip></td>
+                            <td style={{ padding: '11px 14px', textAlign: 'right', fontSize: 12, color: G.textMuted, whiteSpace: 'nowrap' }}>{date(u.last_active)}</td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ══ TOP ERRORS ════════════════════════════════════════════════ */}
+            {tab === 'misspelled' && (
+              <div>
+                <SectionHead>Most frequently misspelled words</SectionHead>
+                {topMisspelled.length === 0 ? (
+                  <EmptyState message="No misspelled word data yet." />
+                ) : (
+                  <>
+                    {/* Bar chart of top 10 */}
+                    <div style={{ background: G.white, borderRadius: 14, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: `1px solid ${G.border}`, marginBottom: 20 }}>
+                      <div style={{ fontSize: 12, color: G.textMuted, marginBottom: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Frequency — top {Math.min(topMisspelled.length, 10)} words
+                      </div>
+                      {topMisspelled.slice(0, 10).map((row, i) => (
+                        <Bar
+                          key={i}
+                          label={row.misspelled_word}
+                          value={row.frequency}
+                          max={topMisspelled[0]?.frequency ?? 1}
+                          color={i === 0 ? G.red : i < 3 ? G.orange : G.green}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Full table */}
+                    <div style={{ overflowX: 'auto', background: G.white, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: `1px solid ${G.border}` }}>
+                      <table style={{ marginTop: 0 }}>
+                        <thead>
+                          <tr style={{ background: G.bg }}>
+                            {['#', 'Misspelled word', 'Times found', 'Avg Levenshtein dist.', 'Avg Jaro-Winkler sim.', 'Avg confidence'].map((h, i) => (
+                              <th key={i} style={{ color: G.green, padding: '12px 14px', textAlign: i > 1 ? 'right' : 'left', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topMisspelled.map((row, i) => (
+                            <motion.tr
+                              key={i}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: i * 0.03 }}
+                              style={{ borderTop: `1px solid ${G.border}` }}
+                            >
+                              <td style={{ padding: '11px 14px', color: G.textMuted, fontSize: 13 }}>{i + 1}</td>
+                              <td style={{ padding: '11px 14px', fontWeight: 800, color: G.red, fontSize: 14 }}>{row.misspelled_word}</td>
+                              <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: 700, fontSize: 14 }}>{num(row.frequency)}</td>
+                              <td style={{ padding: '11px 14px', textAlign: 'right', fontSize: 14 }}>
+                                <Chip color={G.green}>{dec(row.avg_lev_distance, 3)}</Chip>
+                              </td>
+                              <td style={{ padding: '11px 14px', textAlign: 'right', fontSize: 14 }}>
+                                <Chip
+                                  color={Number(row.avg_jw_similarity) >= 0.75 ? G.green : G.orange}
+                                  bg={Number(row.avg_jw_similarity) >= 0.75 ? G.greenLight : G.orangeLight}
+                                >
+                                  {dec(row.avg_jw_similarity, 4)}
+                                </Chip>
+                              </td>
+                              <td style={{ padding: '11px 14px', textAlign: 'right', fontSize: 14 }}>
+                                {row.avg_confidence != null
+                                  ? <Chip color={G.blue} bg={G.blueLight}>{dec(row.avg_confidence, 3)}</Chip>
+                                  : <span style={{ color: G.textMuted }}>—</span>}
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══ LIVE COMPARE ══════════════════════════════════════════════ */}
+            {tab === 'compare' && (
+              <div>
+                <SectionHead>Live algorithm comparison</SectionHead>
+                <p style={{ fontSize: 14, color: G.textMuted, margin: '0 0 20px' }}>
+                  Enter any word pair to compare Adapted Levenshtein vs Jaro-Winkler side by side. Press Enter or click Compare.
+                </p>
+                <div style={{ background: G.white, borderRadius: 14, padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: `1px solid ${G.border}` }}>
+                  <CompareTool />
+                </div>
+              </div>
+            )}
+
+          </motion.div>
+        </AnimatePresence>
       )}
     </div>
   );
