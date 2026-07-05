@@ -85,6 +85,10 @@ export default function Signup() {
       setFormError('Please fill in all required fields (first name, last name, student ID, email, section, password).');
       return;
     }
+    if (formData.id.length !== 7) {
+      setFormError('Student ID must be exactly 7 digits.');
+      return;
+    }
     if (formData.password.length < 6) {
       setFormError('Password must be at least 6 characters.');
       return;
@@ -169,9 +173,14 @@ export default function Signup() {
             <motion.div variants={fieldVariants}>
               <input
                 type="text"
-                placeholder="Student ID (e.g., 2023-12345)"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="Student ID (7 digits)"
                 value={formData.id}
-                onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                onChange={(e) => {
+                  const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 7);
+                  setFormData({ ...formData, id: digitsOnly });
+                }}
               />
             </motion.div>
             <motion.div variants={fieldVariants}>
