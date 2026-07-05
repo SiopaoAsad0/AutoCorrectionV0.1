@@ -2,6 +2,39 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
+const T = {
+  paper:      '#f2f3ec',
+  ink:        '#16241d',
+  inkSoft:    '#4b584f',
+  inkFaint:   '#8b9489',
+  forest:     '#1f5c42',
+  forestDeep: '#123a29',
+  red:        '#b3402f',
+  redTint:    '#f7e9e5',
+  hairline:   '#d7d9cd',
+  white:      '#fffdf8',
+};
+
+const FONTS_IMPORT = `
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+  .pnc-login input {
+    width: 100%; height: 46px; padding: 0 14px; font-size: 14px;
+    border-radius: 6px; border: 1.5px solid ${T.hairline};
+    background: ${T.paper}; color: ${T.ink}; font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s ease;
+  }
+  .pnc-login input:focus { outline: none; border-color: ${T.forest}; }
+  .pnc-login button:focus-visible, .pnc-login a:focus-visible, .pnc-login input:focus-visible {
+    outline: 2px solid ${T.forest}; outline-offset: 2px;
+  }
+  .pnc-password-toggle {
+    position: absolute; right: 6px; top: 6px; bottom: 6px;
+    padding: 0 12px; font-size: 12px; font-weight: 600;
+    background: ${T.paper}; color: ${T.inkSoft};
+    border: 1px solid ${T.hairline}; border-radius: 4px; cursor: pointer;
+  }
+`;
+
 async function hashPassword(password) {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
@@ -22,7 +55,7 @@ export default function Login() {
     setError(null);
 
     if (!studentId || !password) {
-      setError('Please enter both Student ID and password.');
+      setError('Please enter both student ID and password.');
       return;
     }
 
@@ -37,7 +70,7 @@ export default function Login() {
     try {
       const savedData = localStorage.getItem('student_' + studentId);
       if (!savedData) {
-        setError('Access denied: Student ID not recognized.');
+        setError('Access denied: student ID not recognized.');
         return;
       }
       let student;
@@ -53,7 +86,7 @@ export default function Login() {
       }
       const passwordHash = await hashPassword(password);
       if (student.passwordHash !== passwordHash) {
-        setError('Access denied: Incorrect password.');
+        setError('Access denied: incorrect password.');
         return;
       }
       localStorage.setItem('isLoggedIn', 'true');
@@ -67,63 +100,93 @@ export default function Login() {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.1 }}
-      className="page-wrapper"
-    >
-      <div className="login-card">
-        <motion.h2 initial={{ y: -20 }} animate={{ y: 0 }}>PNC Login</motion.h2>
-        
-        {/* Container ensures vertical stack and internal alignment */}
-        <div className="form-container" style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-          <input 
-            type="text" 
-            placeholder="Enter Student ID" 
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-          />
-          <div className="password-input-wrap">
-            <input 
-              type={showPassword ? 'text' : 'password'} 
-              placeholder="Enter password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+    <div className="pnc-login" style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '40px 20px', background: T.paper, fontFamily: "'Inter', system-ui, sans-serif",
+    }}>
+      <style>{FONTS_IMPORT}</style>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        style={{ width: '100%', maxWidth: 400 }}
+      >
+        <div style={{
+          background: T.white, borderRadius: 10, border: `1px solid ${T.hairline}`,
+          boxShadow: '0 4px 24px rgba(18,58,41,0.08)', padding: '32px 30px',
+        }}>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 500, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+              PNC · Taglish Spell Checker
+            </div>
+            <h1 style={{ margin: 0, fontFamily: "'Source Serif 4', serif", fontSize: '1.5rem', fontWeight: 700, color: T.ink }}>
+              Log in
+            </h1>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <input
+              type="text"
+              placeholder="Student ID"
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
             />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                style={{ paddingRight: 66 }}
+              />
+              <button
+                type="button"
+                className="pnc-password-toggle"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                style={{ padding: '10px 14px', background: T.redTint, color: T.red, borderRadius: 6, fontSize: 13, border: `1px solid ${T.red}33` }}
+              >
+                {error}
+              </motion.div>
+            )}
+
             <button
-              type="button"
-              className="password-toggle"
-              onClick={() => setShowPassword((s) => !s)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-              title={showPassword ? 'Hide password' : 'Show password'}
+              onClick={handleLogin}
+              disabled={loading}
+              style={{
+                height: 46, fontSize: 14, fontWeight: 700, marginTop: 4,
+                background: loading ? T.inkFaint : T.forestDeep, color: T.white,
+                border: 'none', borderRadius: 6, cursor: loading ? 'not-allowed' : 'pointer',
+              }}
             >
-              {showPassword ? 'Hide' : 'Show'}
+              {loading ? 'Signing in…' : 'Log in to checker'}
             </button>
           </div>
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleLogin}
-            disabled={loading}
-          >
-            {loading ? 'Signing in...' : 'Login to Checker'}
-          </motion.button>
-          {error && (
-            <div style={{ color: '#c00', fontSize: 13, marginTop: 10 }}>{error}</div>
-          )}
+
+          <p style={{ marginTop: 20, fontSize: 13, color: T.inkSoft, textAlign: 'center' }}>
+            New participant?{' '}
+            <Link to="/signup" style={{ color: T.forestDeep, fontWeight: 700, textDecoration: 'none' }}>
+              Register here
+            </Link>
+          </p>
+          <p style={{ marginTop: 8, fontSize: 13, textAlign: 'center' }}>
+            <Link to="/" style={{ color: T.inkSoft, fontWeight: 500, textDecoration: 'none' }}>
+              ← Back to home
+            </Link>
+          </p>
         </div>
-        
-        <p style={{ marginTop: '20px' }}>
-          New participant? <Link to="/signup" style={{ color: '#00703c', fontWeight: 'bold' }}>Register here</Link>
-        </p>
-        <p style={{ marginTop: '8px' }}>
-          <Link to="/" style={{ color: '#00703c', fontWeight: 'bold' }}>
-            ← Back to home
-          </Link>
-        </p>
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }
