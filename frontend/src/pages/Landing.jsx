@@ -4,53 +4,101 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-const G = {
-  green:      '#00703c',
-  greenLight: '#e8f5ee',
-  greenMid:   '#c8e6d6',
-  gold:       '#ffcc00',
-  goldLight:  '#fff8d6',
-  red:        '#dc3545',
-  redLight:   '#fdf0f1',
-  text:       '#1a2e24',
-  textMid:    '#4a5c52',
-  textMuted:  '#8a9e94',
-  border:     '#e0ebe4',
-  bg:         '#f5f7f6',
-  white:      '#ffffff',
+/* ────────────────────────────────────────────────────────────────────────
+   Design tokens
+   Identity: an editor's manuscript — the actual work of the product
+   (a word struck out, a word corrected) is the visual subject, not an
+   illustration of it. Warm paper, forest ink, a single "pencil red" for
+   corrections, mono type for anything the algorithm produced.
+   ──────────────────────────────────────────────────────────────────── */
+const T = {
+  paper:      '#f2f3ec',
+  paperDim:   '#ebede3',
+  ink:        '#16241d',
+  inkSoft:    '#4b584f',
+  inkFaint:   '#8b9489',
+  forest:     '#1f5c42',
+  forestDeep: '#123a29',
+  forestTint: '#e6ede8',
+  red:        '#b3402f',
+  redTint:    '#f7e9e5',
+  gold:       '#a8842f',
+  hairline:   '#d7d9cd',
+  white:      '#fffdf8',
 };
 
+const FONTS_IMPORT = `
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  .pnc-landing * { box-sizing: border-box; }
+  .pnc-landing a:focus-visible,
+  .pnc-landing button:focus-visible,
+  .pnc-landing input:focus-visible,
+  .pnc-landing textarea:focus-visible {
+    outline: 2px solid ${T.forest};
+    outline-offset: 2px;
+  }
+  .pnc-landing ::selection { background: ${T.forestTint}; color: ${T.forestDeep}; }
+  .pnc-nav-link { transition: color 0.15s ease; }
+  .pnc-nav-link:hover { color: ${T.forest} !important; }
+  .pnc-cta-primary { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .pnc-cta-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(18,58,41,0.28); }
+  .pnc-cta-secondary { transition: border-color 0.15s ease, color 0.15s ease; }
+  .pnc-cta-secondary:hover { border-color: ${T.forest} !important; color: ${T.forestDeep} !important; }
+  .pnc-field { transition: border-color 0.15s ease; }
+  .pnc-field:focus { border-color: ${T.forest} !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .pnc-landing * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+`;
+
+/* Correction samples for the hero manuscript card — mirrors real output:
+   a struck original, an arrow, the corrected form, tagged by language. */
+const CORRECTIONS = [
+  { before: 'recieve',          after: 'receive',          tag: 'EN',  context: 'will __ feedback within the week' },
+  { before: 'nangangailagan',   after: 'nangangailangan',  tag: 'FIL', context: 'ang mga estudyante ay __ ng gabay' },
+  { before: 'comprehensiv',     after: 'comprehensive',    tag: 'EN',  context: 'a more __ na paliwanag' },
+];
+
+/* Feature list — manuscript marginalia marks stand in for icons, each one
+   distinct rather than decorative. */
 const FEATURES = [
   {
-    icon: '✎',
+    mark: '¶',
     title: 'Spell check & suggestions',
-    desc: 'Weighted Levenshtein distance matching with dictionary-backed corrections for both English and Filipino.',
+    desc: 'Weighted Levenshtein distance runs against a dictionary built for both English and Filipino, so a correction is never guessing at the wrong language.',
   },
   {
-    icon: '🔗',
+    mark: '§',
     title: 'Dual-algorithm comparison',
-    desc: 'Adapted Levenshtein and Jaro-Winkler run side-by-side on every word — the best match wins.',
+    desc: 'Adapted Levenshtein and Jaro-Winkler score every word independently. When they disagree, you see both candidates, not just the one the system picked.',
   },
   {
-    icon: '🇵🇭',
+    mark: '†',
     title: 'Taglish-aware',
-    desc: 'Understands Filipino morphology, informal contractions, and mixed-language sentences.',
+    desc: 'Filipino affixes, contractions, and code-switched sentences are parsed as one grammar, not two overlapping ones bolted together.',
   },
   {
-    icon: '📊',
+    mark: '‡',
     title: 'Per-session analytics',
-    desc: 'See correction rates, word error rate, detected language, and processing latency after every check.',
+    desc: 'Correction rate, word error rate, detected language, and processing latency are logged after every check — not just the final corrected text.',
   },
   {
-    icon: '🧠',
+    mark: '*',
     title: 'Context-aware ranking',
-    desc: 'Suggestions are ranked by sentence context and word frequency, not just edit distance.',
+    desc: 'Suggestions are ordered by surrounding sentence context and word frequency in real usage, not by edit distance alone.',
   },
   {
-    icon: '👤',
+    mark: '○',
     title: 'Student profiles',
-    desc: 'Sign in with your PNC student ID to save your session and contact the admin directly.',
+    desc: 'Sign in with your PNC student ID to keep a running session history and message an administrator directly if something looks wrong.',
   },
+];
+
+const STEPS = [
+  { num: 'I',   title: 'Create an account', desc: 'Sign up with your student ID and name — no password required for students.' },
+  { num: 'II',  title: 'Paste your text',   desc: 'Type or paste any English, Filipino, or Taglish text into the checker.' },
+  { num: 'III', title: 'Review results',    desc: 'See flagged words in place, open suggestions, and accept a correction with one click.' },
 ];
 
 export default function Landing() {
@@ -84,7 +132,7 @@ export default function Landing() {
           `Could not send (${res.status})`;
         throw new Error(msg);
       }
-      setFeedback(data.message || 'Thanks — we received your message!');
+      setFeedback(data.message || 'Thanks — we received your message.');
       setContactName(''); setContactEmail(''); setContactMessage('');
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
@@ -92,204 +140,209 @@ export default function Landing() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: G.white, fontFamily: "'Inter','Segoe UI',Roboto,sans-serif", color: G.text }}>
+    <div className="pnc-landing" style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      background: T.paper, fontFamily: "'Inter', system-ui, sans-serif", color: T.ink,
+    }}>
+      <style>{FONTS_IMPORT}</style>
 
       {/* ══ NAV ══════════════════════════════════════════════════════════ */}
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: G.white,
-        boxShadow: '0 1px 0 #e0ebe4',
-      }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 100, background: T.paper, borderBottom: `1px solid ${T.hairline}` }}>
         <div style={{
-          maxWidth: 1080, margin: '0 auto',
-          padding: '0 24px',
-          height: 60,
+          maxWidth: 1080, margin: '0 auto', padding: '0 24px', height: 64,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          {/* Brand */}
           <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12 }}
           >
             <div style={{
-              width: 34, height: 34, borderRadius: 8,
-              background: G.green,
+              width: 34, height: 34, borderRadius: 4,
+              border: `1.5px solid ${T.ink}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 16, color: G.white, fontWeight: 800,
+              fontFamily: "'Source Serif 4', serif", fontSize: 17, fontWeight: 700, color: T.ink,
             }}>P</div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: G.text, lineHeight: 1.1 }}>PNC</div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: G.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1 }}>
+              <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 15, fontWeight: 700, color: T.ink, lineHeight: 1.1 }}>
+                Pamantasan ng Cabuyao
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 500, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.3 }}>
                 Taglish Spell Checker
               </div>
             </div>
           </motion.div>
 
-          {/* Nav links */}
-          <motion.div
+          <motion.nav
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.15 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 4 }}
           >
-            <a
-              href="#contact"
-              style={{
-                padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                color: G.textMuted, textDecoration: 'none', transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { e.target.style.background = G.greenLight; e.target.style.color = G.green; }}
-              onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = G.textMuted; }}
-            >
+            <a href="#contact" className="pnc-nav-link" style={{ padding: '8px 14px', fontSize: 13, fontWeight: 500, color: T.inkSoft, textDecoration: 'none' }}>
               Contact
             </a>
-            <Link
-              to="/login"
-              style={{
-                padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                color: G.textMuted, textDecoration: 'none',
-              }}
-              onMouseEnter={e => { e.target.style.background = G.greenLight; e.target.style.color = G.green; }}
-              onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = G.textMuted; }}
-            >
+            <Link to="/login" className="pnc-nav-link" style={{ padding: '8px 14px', fontSize: 13, fontWeight: 500, color: T.inkSoft, textDecoration: 'none' }}>
               Log in
             </Link>
             <Link
               to="/signup"
+              className="pnc-cta-primary"
               style={{
-                display: 'inline-flex', alignItems: 'center',
-                padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-                background: G.green, color: G.white, textDecoration: 'none',
-                boxShadow: '0 2px 8px rgba(0,112,60,0.25)',
-                transition: 'filter 0.15s, transform 0.15s',
+                marginLeft: 8, padding: '9px 18px', borderRadius: 6, fontSize: 13, fontWeight: 700,
+                background: T.forestDeep, color: T.white, textDecoration: 'none',
               }}
-              onMouseEnter={e => { e.target.style.filter = 'brightness(1.08)'; e.target.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={e => { e.target.style.filter = 'none'; e.target.style.transform = 'none'; }}
             >
               Create account
             </Link>
-          </motion.div>
+          </motion.nav>
         </div>
-        {/* Gold accent */}
-        <div style={{ height: 3, background: `linear-gradient(90deg, ${G.green} 60%, ${G.gold} 100%)` }} />
       </header>
 
       <main style={{ flex: 1 }}>
 
         {/* ══ HERO ════════════════════════════════════════════════════════ */}
-        <section style={{
-          maxWidth: 860, margin: '0 auto',
-          padding: '72px 24px 64px',
-          textAlign: 'center',
-        }}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div style={{
-              display: 'inline-block',
-              background: G.goldLight, color: '#a07800',
-              fontSize: 12, fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.1em',
-              padding: '6px 16px', borderRadius: 99,
-              border: '1px solid #ffe58a',
-              marginBottom: 24,
-            }}>
-              Student writing assistant · PNC
-            </div>
+        <section style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 24px 40px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 0.95fr)', gap: 56, alignItems: 'center' }}>
 
-            <h1 style={{
-              margin: '0 0 20px',
-              fontSize: 'clamp(1.9rem, 4.5vw, 2.8rem)',
-              fontWeight: 800, lineHeight: 1.2, color: G.text,
-            }}>
-              Spell-check your Taglish text<br />
-              <span style={{ color: G.green }}>with confidence</span>
-            </h1>
-
-            <p style={{
-              margin: '0 auto 36px',
-              maxWidth: 580,
-              fontSize: '1.05rem', lineHeight: 1.7, color: G.textMid,
-            }}>
-              Paste your draft, run analysis, and get smart corrections powered by Levenshtein distance and Jaro-Winkler similarity — built for Filipino learners.
-            </p>
-
-            <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/signup" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '13px 28px', borderRadius: 10, fontSize: 15, fontWeight: 700,
-                background: G.green, color: G.white, textDecoration: 'none',
-                boxShadow: '0 4px 16px rgba(0,112,60,0.28)',
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div style={{
+                fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 500,
+                color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.1em',
+                marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8,
               }}>
-                Get started →
-              </Link>
-              <Link to="/login" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '13px 28px', borderRadius: 10, fontSize: 15, fontWeight: 700,
-                background: G.white, color: G.green, textDecoration: 'none',
-                border: `2px solid ${G.greenMid}`,
+                <span style={{ width: 18, height: 1, background: T.forestDeep, display: 'inline-block' }} />
+                Student writing assistant
+              </div>
+
+              <h1 style={{
+                margin: '0 0 22px', fontFamily: "'Source Serif 4', serif",
+                fontSize: 'clamp(2rem, 3.4vw, 2.9rem)', fontWeight: 700, lineHeight: 1.18, color: T.ink,
               }}>
-                Log in
-              </Link>
-            </div>
-          </motion.div>
+                Every misspelled word — in English, Filipino, or both at once.
+              </h1>
+
+              <p style={{ margin: '0 0 32px', maxWidth: 480, fontSize: 16, lineHeight: 1.7, color: T.inkSoft }}>
+                Paste a paragraph and two algorithms check it side by side, word by word — weighted Levenshtein distance and Jaro-Winkler similarity — so nothing slips through for being in the wrong language.
+              </p>
+
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <Link to="/signup" className="pnc-cta-primary" style={{
+                  display: 'inline-flex', alignItems: 'center', padding: '13px 26px', borderRadius: 6,
+                  fontSize: 14, fontWeight: 700, background: T.forestDeep, color: T.white, textDecoration: 'none',
+                }}>
+                  Get started
+                </Link>
+                <Link to="/login" className="pnc-cta-secondary" style={{
+                  display: 'inline-flex', alignItems: 'center', padding: '13px 26px', borderRadius: 6,
+                  fontSize: 14, fontWeight: 700, background: 'transparent', color: T.inkSoft,
+                  border: `1.5px solid ${T.hairline}`, textDecoration: 'none',
+                }}>
+                  Log in
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Signature element: an actual corrections log, styled like a
+                manuscript proof — this is the product's real output. */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                background: T.white, border: `1px solid ${T.hairline}`, borderRadius: 8,
+                padding: '20px 22px', boxShadow: '0 1px 2px rgba(22,36,29,0.04)',
+              }}
+            >
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                paddingBottom: 14, marginBottom: 14, borderBottom: `1px solid ${T.hairline}`,
+              }}>
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Correction log
+                </span>
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: T.inkFaint }}>
+                  3 flagged
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {CORRECTIONS.map((c, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 14, color: T.inkSoft, lineHeight: 1.5 }}>
+                      {c.context.split('__').map((part, idx, arr) => (
+                        <span key={idx}>
+                          {part}
+                          {idx < arr.length - 1 && (
+                            <span style={{ color: T.ink, fontWeight: 600 }}>…</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: 13 }}>
+                      <span style={{
+                        padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 600,
+                        background: T.forestTint, color: T.forestDeep, letterSpacing: '0.03em',
+                      }}>{c.tag}</span>
+                      <span style={{ color: T.red, textDecoration: 'line-through', textDecorationColor: T.red }}>
+                        {c.before}
+                      </span>
+                      <span style={{ color: T.inkFaint }}>→</span>
+                      <span style={{ color: T.forestDeep, fontWeight: 600 }}>{c.after}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
         </section>
 
         {/* ══ FEATURES ════════════════════════════════════════════════════ */}
-        <section style={{
-          background: G.bg,
-          borderTop: `1px solid ${G.border}`,
-          borderBottom: `1px solid ${G.border}`,
-          padding: '56px 24px',
-        }}>
+        <section style={{ borderTop: `1px solid ${T.hairline}`, borderBottom: `1px solid ${T.hairline}`, background: T.paperDim, padding: '60px 24px' }}>
           <div style={{ maxWidth: 1080, margin: '0 auto' }}>
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
               transition={{ duration: 0.4 }}
-              style={{ textAlign: 'center', marginBottom: 40 }}
+              style={{ marginBottom: 40, maxWidth: 520 }}
             >
-              <h2 style={{ margin: '0 0 10px', fontSize: '1.5rem', fontWeight: 800, color: G.text }}>
-                Everything you need for better writing
+              <h2 style={{ margin: '0 0 10px', fontFamily: "'Source Serif 4', serif", fontSize: '1.6rem', fontWeight: 700, color: T.ink }}>
+                What the checker actually does
               </h2>
-              <p style={{ margin: 0, color: G.textMuted, fontSize: 14 }}>
-                Powered by two spelling algorithms, Filipino morphology, and context-aware ranking.
+              <p style={{ margin: 0, color: T.inkSoft, fontSize: 14.5, lineHeight: 1.6 }}>
+                Six things running underneath every check, in plain terms.
               </p>
             </motion.div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: 16,
-            }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0 40px' }}>
               {FEATURES.map((f, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-20px' }}
-                  transition={{ delay: i * 0.06, duration: 0.4 }}
+                  transition={{ delay: i * 0.04, duration: 0.35 }}
                   style={{
-                    background: G.white,
-                    borderRadius: 14, padding: 22,
-                    border: `1px solid ${G.border}`,
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+                    display: 'flex', gap: 16, padding: '20px 0',
+                    borderBottom: `1px solid ${T.hairline}`,
                   }}
                 >
                   <div style={{
-                    width: 42, height: 42, borderRadius: 10,
-                    background: G.greenLight, border: `1px solid ${G.greenMid}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 20, marginBottom: 14,
+                    flexShrink: 0, width: 30, fontFamily: "'Source Serif 4', serif",
+                    fontSize: 22, fontWeight: 600, color: T.gold, lineHeight: 1.3,
                   }}>
-                    {f.icon}
+                    {f.mark}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: G.text, marginBottom: 6 }}>{f.title}</div>
-                  <div style={{ fontSize: 13, color: G.textMid, lineHeight: 1.6 }}>{f.desc}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14.5, color: T.ink, marginBottom: 5 }}>{f.title}</div>
+                    <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.65 }}>{f.desc}</div>
+                  </div>
                 </motion.div>
               ))}
             </div>
@@ -297,49 +350,44 @@ export default function Landing() {
         </section>
 
         {/* ══ HOW IT WORKS ════════════════════════════════════════════════ */}
-        <section style={{ padding: '56px 24px' }}>
-          <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
+        <section style={{ padding: '60px 24px' }}>
+          <div style={{ maxWidth: 780, margin: '0 auto' }}>
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4 }}
+              style={{ marginBottom: 36 }}
             >
-              <h2 style={{ margin: '0 0 10px', fontSize: '1.4rem', fontWeight: 800, color: G.text }}>
+              <h2 style={{ margin: '0 0 10px', fontFamily: "'Source Serif 4', serif", fontSize: '1.4rem', fontWeight: 700, color: T.ink }}>
                 How it works
               </h2>
-              <p style={{ margin: '0 0 36px', color: G.textMuted, fontSize: 14 }}>Three simple steps.</p>
+              <p style={{ margin: 0, color: T.inkSoft, fontSize: 14 }}>Three steps, start to finish.</p>
             </motion.div>
 
-            <div style={{ display: 'flex', gap: 0, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {[
-                { step: '1', title: 'Create an account', desc: 'Sign up with your student ID and name — no password required for students.' },
-                { step: '2', title: 'Paste your text',   desc: 'Type or paste any English, Filipino, or Taglish text into the checker.' },
-                { step: '3', title: 'Review results',    desc: 'See highlighted words, click for suggestions, and accept corrections instantly.' },
-              ].map((s, i) => (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {STEPS.map((s, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 8 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.4 }}
+                  transition={{ delay: i * 0.08, duration: 0.35 }}
                   style={{
-                    flex: 1, minWidth: 180,
-                    padding: '24px 20px',
-                    position: 'relative',
+                    display: 'flex', gap: 22, alignItems: 'flex-start', padding: '20px 0',
+                    borderTop: i === 0 ? 'none' : `1px solid ${T.hairline}`,
                   }}
                 >
                   <div style={{
-                    width: 44, height: 44, borderRadius: '50%',
-                    background: G.green, color: G.white,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18, fontWeight: 800, margin: '0 auto 14px',
-                    boxShadow: '0 4px 14px rgba(0,112,60,0.25)',
+                    flexShrink: 0, width: 40, fontFamily: "'Source Serif 4', serif",
+                    fontSize: 18, fontWeight: 600, color: T.forestDeep,
                   }}>
-                    {s.step}
+                    {s.num}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: G.text, marginBottom: 6 }}>{s.title}</div>
-                  <div style={{ fontSize: 13, color: G.textMid, lineHeight: 1.6 }}>{s.desc}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: T.ink, marginBottom: 4 }}>{s.title}</div>
+                    <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6 }}>{s.desc}</div>
+                  </div>
                 </motion.div>
               ))}
             </div>
@@ -348,54 +396,41 @@ export default function Landing() {
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              style={{ marginTop: 32 }}
+              transition={{ delay: 0.25 }}
+              style={{ marginTop: 28 }}
             >
-              <Link to="/signup" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '12px 26px', borderRadius: 10, fontSize: 14, fontWeight: 700,
-                background: G.green, color: G.white, textDecoration: 'none',
-                boxShadow: '0 4px 14px rgba(0,112,60,0.25)',
+              <Link to="/signup" className="pnc-cta-primary" style={{
+                display: 'inline-flex', alignItems: 'center', padding: '12px 24px', borderRadius: 6,
+                fontSize: 14, fontWeight: 700, background: T.forestDeep, color: T.white, textDecoration: 'none',
               }}>
-                Start now — it's free →
+                Start now — it's free
               </Link>
             </motion.div>
           </div>
         </section>
 
         {/* ══ CONTACT ═════════════════════════════════════════════════════ */}
-        <section
-          id="contact"
-          style={{
-            background: G.bg,
-            borderTop: `1px solid ${G.border}`,
-            padding: '56px 24px 64px',
-          }}
-        >
-          <div style={{ maxWidth: 480, margin: '0 auto' }}>
+        <section id="contact" style={{ borderTop: `1px solid ${T.hairline}`, background: T.paperDim, padding: '60px 24px 68px' }}>
+          <div style={{ maxWidth: 460, margin: '0 auto' }}>
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4 }}
-              style={{ textAlign: 'center', marginBottom: 28 }}
+              style={{ marginBottom: 26 }}
             >
-              <h2 style={{ margin: '0 0 10px', fontSize: '1.4rem', fontWeight: 800, color: G.text }}>
+              <h2 style={{ margin: '0 0 8px', fontFamily: "'Source Serif 4', serif", fontSize: '1.4rem', fontWeight: 700, color: T.ink }}>
                 Contact us
               </h2>
-              <p style={{ margin: 0, fontSize: 14, color: G.textMuted, lineHeight: 1.6 }}>
-                Questions or feedback? Administrators read every message and can reply directly.
+              <p style={{ margin: 0, fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6 }}>
+                Questions or feedback? An administrator reads every message and can reply directly.
               </p>
             </motion.div>
 
-            <div style={{
-              background: G.white, borderRadius: 16, padding: 28,
-              border: `1px solid ${G.border}`,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-            }}>
+            <div style={{ background: T.white, borderRadius: 8, padding: 26, border: `1px solid ${T.hairline}` }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: G.textMid, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.inkSoft, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
                     Name
                   </label>
                   <input
@@ -404,11 +439,12 @@ export default function Landing() {
                     onChange={e => setContactName(e.target.value)}
                     placeholder="Your full name"
                     maxLength={255}
-                    style={{ marginBottom: 0, fontSize: 14 }}
+                    className="pnc-field"
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 14, borderRadius: 5, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: G.textMid, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.inkSoft, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
                     Email
                   </label>
                   <input
@@ -416,11 +452,12 @@ export default function Landing() {
                     value={contactEmail}
                     onChange={e => setContactEmail(e.target.value)}
                     placeholder="you@email.com"
-                    style={{ marginBottom: 0, fontSize: 14 }}
+                    className="pnc-field"
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 14, borderRadius: 5, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: G.textMid, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.inkSoft, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
                     Message
                   </label>
                   <textarea
@@ -429,7 +466,8 @@ export default function Landing() {
                     rows={5}
                     maxLength={5000}
                     placeholder="What would you like to tell us?"
-                    style={{ marginBottom: 0, fontSize: 14, minHeight: 120 }}
+                    className="pnc-field"
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 14, borderRadius: 5, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink, minHeight: 120, fontFamily: 'inherit', resize: 'vertical' }}
                   />
                 </div>
 
@@ -437,7 +475,7 @@ export default function Landing() {
                   {error && (
                     <motion.div
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                      style={{ padding: '10px 14px', background: G.redLight, color: G.red, borderRadius: 8, fontSize: 13, border: '1px solid #f5c6cb' }}
+                      style={{ padding: '10px 14px', background: T.redTint, color: T.red, borderRadius: 5, fontSize: 13, border: `1px solid ${T.red}33` }}
                     >
                       {error}
                     </motion.div>
@@ -445,9 +483,9 @@ export default function Landing() {
                   {feedback && (
                     <motion.div
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                      style={{ padding: '10px 14px', background: G.greenLight, color: G.green, borderRadius: 8, fontSize: 13, border: `1px solid ${G.greenMid}`, fontWeight: 600 }}
+                      style={{ padding: '10px 14px', background: T.forestTint, color: T.forestDeep, borderRadius: 5, fontSize: 13, border: `1px solid ${T.forest}33`, fontWeight: 600 }}
                     >
-                      ✓ {feedback}
+                      {feedback}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -455,15 +493,15 @@ export default function Landing() {
                 <button
                   onClick={submitContact}
                   disabled={loading}
+                  className="pnc-cta-primary"
                   style={{
-                    height: 46, fontSize: 14, fontWeight: 700,
-                    background: loading ? '#b0c4ba' : G.green,
-                    color: G.white, border: 'none', borderRadius: 10,
+                    height: 46, fontSize: 14, fontWeight: 700, marginTop: 4,
+                    background: loading ? T.inkFaint : T.forestDeep,
+                    color: T.white, border: 'none', borderRadius: 6,
                     cursor: loading ? 'not-allowed' : 'pointer',
-                    minWidth: 'auto',
                   }}
                 >
-                  {loading ? 'Sending…' : '↑ Send message'}
+                  {loading ? 'Sending…' : 'Send message'}
                 </button>
               </div>
             </div>
@@ -472,27 +510,26 @@ export default function Landing() {
       </main>
 
       {/* ══ FOOTER ══════════════════════════════════════════════════════ */}
-      <footer style={{
-        background: G.text,
-        padding: '28px 24px',
-        textAlign: 'center',
-      }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
+      <footer style={{ background: T.forestDeep, padding: '30px 24px' }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
-              width: 28, height: 28, borderRadius: 6,
-              background: G.green,
+              width: 26, height: 26, borderRadius: 3, border: '1.5px solid rgba(255,255,255,0.5)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, color: G.white, fontWeight: 800,
+              fontFamily: "'Source Serif 4', serif", fontSize: 13, fontWeight: 700, color: T.white,
             }}>P</div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>PNC Taglish Spell Checker</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(255,253,248,0.85)' }}>
+              PNC Taglish Spell Checker
+            </span>
           </div>
-          <p style={{ margin: '0 0 10px', fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
-            Pamantasan ng Cabuyao · Student Writing Assistant
-          </p>
-          <Link to="/admin/login" style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>
-            Admin portal
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <span style={{ fontSize: 12, color: 'rgba(255,253,248,0.45)' }}>
+              Pamantasan ng Cabuyao
+            </span>
+            <Link to="/admin/login" style={{ fontSize: 12, color: 'rgba(255,253,248,0.45)', textDecoration: 'none' }}>
+              Admin portal
+            </Link>
+          </div>
         </div>
       </footer>
     </div>
