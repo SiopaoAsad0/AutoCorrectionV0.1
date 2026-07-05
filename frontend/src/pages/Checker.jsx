@@ -4,25 +4,66 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-const G = {
-  green:      '#00703c',
-  greenLight: '#e8f5ee',
-  greenMid:   '#c8e6d6',
-  red:        '#dc3545',
-  redLight:   '#fdf0f1',
-  orange:     '#e65100',
-  orangeLight:'#fff3e0',
-  purple:     '#6f42c1',
-  purpleLight:'#f3f0fb',
-  text:       '#1a2e24',
-  textMid:    '#4a5c52',
-  textMuted:  '#8a9e94',
-  border:     '#e0ebe4',
-  bg:         '#f5f7f6',
-  white:      '#ffffff',
+/* ────────────────────────────────────────────────────────────────────────
+   Same design tokens as Landing.jsx. Worth lifting into a shared
+   /src/theme.js and importing in both places once you have a moment —
+   duplicated here only because this file was shared standalone.
+   ──────────────────────────────────────────────────────────────────── */
+const T = {
+  paper:      '#f2f3ec',
+  paperDim:   '#ebede3',
+  ink:        '#16241d',
+  inkSoft:    '#4b584f',
+  inkFaint:   '#8b9489',
+  forest:     '#1f5c42',
+  forestDeep: '#123a29',
+  forestTint: '#e6ede8',
+  gold:       '#a8842f',
+  goldTint:   '#f7f1e2',
+  plum:       '#6d5a8f',
+  plumTint:   '#efebf5',
+  red:        '#b3402f',
+  redTint:    '#f7e9e5',
+  hairline:   '#d7d9cd',
+  white:      '#fffdf8',
 };
 
-/* ── helpers ── */
+const FONTS_IMPORT = `
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  .pnc-checker * { box-sizing: border-box; }
+  .pnc-checker button:focus-visible,
+  .pnc-checker textarea:focus-visible,
+  .pnc-checker tr:focus-visible {
+    outline: 2px solid ${T.forest};
+    outline-offset: 2px;
+  }
+  .pnc-checker table { margin-top: 0; }
+  .pnc-checker tbody tr:hover { background: ${T.forestTint}; }
+  .pnc-btn-primary { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .pnc-btn-primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(18,58,41,0.25); }
+  .pnc-btn-ghost { transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease; }
+  .pnc-btn-ghost:not(:disabled):hover { border-color: ${T.forest} !important; }
+
+  /* Overrides for the highlight-overlay classes used by the textarea mirror.
+     These class names (textarea-highlight-wrap / textarea-mirror /
+     textarea-with-highlight / word-status-inline) are assumed to live in
+     your global stylesheet for positioning + font sync between the mirror
+     and the real textarea. Only colors are overridden here — if your base
+     CSS already sets background/border on these, share that file and I'll
+     fold this in properly instead of layering on top of it. */
+  .pnc-checker .word-status-inline.status-correct    { background: transparent; border-bottom: 2px solid ${T.forest}; }
+  .pnc-checker .word-status-inline.status-suggested  { background: ${T.goldTint}; border-bottom: 2px solid ${T.gold}; }
+  .pnc-checker .word-status-inline.status-grammar     { background: ${T.plumTint}; border-bottom: 2px solid ${T.plum}; }
+  .pnc-checker .word-status-inline.status-misspelled,
+  .pnc-checker .word-status-inline.status-incorrect   { background: ${T.redTint}; border-bottom: 2px solid ${T.red}; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pnc-checker * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+`;
+
+/* ── helpers (unchanged logic) ── */
 function adjustCaseToMatchOriginal(suggestion, originalRaw) {
   if (!suggestion || !originalRaw) return suggestion;
   const s = String(suggestion), o = originalRaw;
@@ -73,10 +114,17 @@ function highlightStatus(res, idx, grammarIssues) {
 }
 
 function statusColor(status) {
-  if (status === 'correct')   return '#2e7d32';
-  if (status === 'suggested') return G.orange;
-  if (status === 'grammar')   return G.purple;
-  return G.red;
+  if (status === 'correct')   return T.forestDeep;
+  if (status === 'suggested') return T.gold;
+  if (status === 'grammar')   return T.plum;
+  return T.red;
+}
+
+function statusTint(status) {
+  if (status === 'correct')   return T.forestTint;
+  if (status === 'suggested') return T.goldTint;
+  if (status === 'grammar')   return T.plumTint;
+  return T.redTint;
 }
 
 function statusLabel(status) {
@@ -92,12 +140,11 @@ function StatPill({ label, value, color }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '10px 18px', borderRadius: 10,
-      background: G.white, border: `1px solid ${G.border}`,
-      boxShadow: '0 1px 4px rgba(0,0,0,0.04)', minWidth: 72,
+      padding: '10px 20px', borderRadius: 8,
+      background: T.white, border: `1px solid ${T.hairline}`, minWidth: 76,
     }}>
-      <span style={{ fontSize: 20, fontWeight: 800, color: color || G.text }}>{value}</span>
-      <span style={{ fontSize: 11, color: G.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{label}</span>
+      <span style={{ fontFamily: "'Source Serif 4', serif", fontSize: 21, fontWeight: 700, color: color || T.ink }}>{value}</span>
+      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: T.inkFaint, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3 }}>{label}</span>
     </div>
   );
 }
@@ -278,21 +325,22 @@ export default function Checker() {
   const sc = analytics?.status_counts || {};
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 64px', fontFamily: "'Inter','Segoe UI',Roboto,sans-serif" }}>
+    <div className="pnc-checker" style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px 64px', fontFamily: "'Inter', system-ui, sans-serif", color: T.ink, background: T.paper }}>
+      <style>{FONTS_IMPORT}</style>
 
       {/* ── Page header ── */}
       <header style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
         flexWrap: 'wrap', gap: 12,
-        borderBottom: `4px solid ${G.green}`,
-        paddingBottom: 16, marginBottom: 28,
+        borderBottom: `1px solid ${T.hairline}`,
+        paddingBottom: 18, marginBottom: 28,
       }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 500, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
             PNC Spell Checker
           </div>
-          <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: G.text }}>Taglish Spell Checker</h1>
-          <p style={{ margin: '5px 0 0', fontSize: 14, color: G.textMuted }}>
+          <h1 style={{ margin: 0, fontFamily: "'Source Serif 4', serif", fontSize: '1.7rem', fontWeight: 700, color: T.ink }}>Taglish Spell Checker</h1>
+          <p style={{ margin: '6px 0 0', fontSize: 13.5, color: T.inkSoft }}>
             Levenshtein + Jaro-Winkler — English &amp; Filipino
           </p>
         </div>
@@ -300,19 +348,21 @@ export default function Checker() {
           <button
             onClick={downloadCSV}
             disabled={results.length === 0}
+            className="pnc-btn-ghost"
             style={{
-              minWidth: 'auto', height: 36, padding: '0 16px', fontSize: 13,
-              background: results.length > 0 ? G.greenLight : G.bg,
-              color: results.length > 0 ? G.green : G.textMuted,
-              border: `1px solid ${results.length > 0 ? G.greenMid : G.border}`,
-              borderRadius: 8, cursor: results.length > 0 ? 'pointer' : 'not-allowed',
+              minWidth: 'auto', height: 36, padding: '0 16px', fontSize: 13, fontWeight: 500,
+              background: T.white,
+              color: results.length > 0 ? T.forestDeep : T.inkFaint,
+              border: `1.5px solid ${T.hairline}`,
+              borderRadius: 6, cursor: results.length > 0 ? 'pointer' : 'not-allowed',
             }}
           >
             ↓ Export CSV
           </button>
           <button
             onClick={() => { localStorage.removeItem('isLoggedIn'); localStorage.removeItem('pnc_user'); navigate('/login'); }}
-            style={{ minWidth: 'auto', height: 36, padding: '0 16px', fontSize: 13, background: G.redLight, color: G.red, border: '1px solid #f5c6cb', borderRadius: 8, cursor: 'pointer' }}
+            className="pnc-btn-ghost"
+            style={{ minWidth: 'auto', height: 36, padding: '0 16px', fontSize: 13, fontWeight: 500, background: T.redTint, color: T.red, border: `1.5px solid ${T.red}33`, borderRadius: 6, cursor: 'pointer' }}
           >
             Log out
           </button>
@@ -326,13 +376,12 @@ export default function Checker() {
 
           {/* Input card */}
           <div style={{
-            background: G.white, borderRadius: 14, padding: 24,
-            boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1px solid ${G.border}`,
+            background: T.white, borderRadius: 8, padding: 24,
+            border: `1px solid ${T.hairline}`,
             marginBottom: 20,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 12, borderBottom: `1px solid ${G.border}` }}>
-              <div style={{ width: 4, height: 18, background: G.green, borderRadius: 2 }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 12, borderBottom: `1px solid ${T.hairline}` }}>
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Input text
               </span>
             </div>
@@ -363,20 +412,20 @@ export default function Checker() {
 
             {/* Legend + counter */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 {[
-                  { dot: '#4caf50', label: 'Correct' },
-                  { dot: G.orange,  label: 'Suggested' },
-                  { dot: G.purple,  label: 'Grammar' },
-                  { dot: G.red,     label: 'Error' },
+                  { dot: T.forest, label: 'Correct' },
+                  { dot: T.gold,   label: 'Suggested' },
+                  { dot: T.plum,   label: 'Grammar' },
+                  { dot: T.red,    label: 'Error' },
                 ].map((l, i) => (
-                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: G.textMid }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: l.dot, display: 'inline-block' }} />
+                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.inkSoft }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: l.dot, display: 'inline-block' }} />
                     {l.label}
                   </span>
                 ))}
               </div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: isAtLimit ? G.red : G.textMuted }}>
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 500, color: isAtLimit ? T.red : T.inkFaint }}>
                 {wordCount} / {MAX_INPUT_WORDS} words
               </span>
             </div>
@@ -386,48 +435,50 @@ export default function Checker() {
               <AnimatePresence>
                 {activeSuggestion && (
                   <motion.div
-                    initial={{ scale: 0.9, opacity: 0, y: 8 }}
+                    initial={{ scale: 0.96, opacity: 0, y: 6 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
+                    exit={{ scale: 0.96, opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     style={{
                       position: 'absolute',
                       left: activeSuggestion.x, top: -60,
-                      background: G.white,
-                      border: `1.5px solid ${G.greenMid}`,
-                      borderRadius: 12, padding: 12,
+                      background: T.white,
+                      border: `1px solid ${T.hairline}`,
+                      borderRadius: 8, padding: 12,
                       zIndex: 1000,
-                      boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
+                      boxShadow: '0 10px 28px rgba(22,36,29,0.14)',
                       minWidth: 220, maxWidth: 300,
                     }}
                   >
-                    <div style={{ fontSize: 10, fontWeight: 800, color: G.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
                       Suggestions
                     </div>
                     {activeSuggestion.suggestions.map((s, i) => (
                       <motion.div
                         key={i}
-                        whileHover={{ x: 4, backgroundColor: G.greenLight }}
+                        whileHover={{ x: 3, backgroundColor: T.forestTint }}
                         onClick={() => void applySuggestion(activeSuggestion.wordIndex, s.word, activeSuggestion.raw, activeSuggestion.phraseSpan ?? 1)}
                         style={{
                           cursor: 'pointer', padding: '8px 10px',
-                          borderRadius: 8, marginBottom: 4,
-                          border: `1px solid ${G.border}`,
+                          borderRadius: 6, marginBottom: 4,
+                          border: `1px solid ${T.hairline}`,
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                           transition: 'background 0.12s',
                         }}
                       >
-                        <span style={{ fontWeight: 700, color: G.green, fontSize: 14 }}>{s.word}</span>
-                        <span style={{ fontSize: 11, color: G.textMuted }}>
+                        <span style={{ fontWeight: 700, color: T.forestDeep, fontSize: 14 }}>{s.word}</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: T.inkFaint }}>
                           {s.grammar ? 'grammar fix' : `dist: ${s.dist}`}
                         </span>
                       </motion.div>
                     ))}
                     <button
                       onClick={() => setActiveSuggestion(null)}
+                      className="pnc-btn-ghost"
                       style={{
                         width: '100%', marginTop: 8, height: 30, fontSize: 12,
-                        background: G.bg, color: G.textMid,
-                        border: `1px solid ${G.border}`, borderRadius: 7,
+                        background: T.paperDim, color: T.inkSoft,
+                        border: `1px solid ${T.hairline}`, borderRadius: 6,
                         cursor: 'pointer', minWidth: 'auto',
                       }}
                     >
@@ -440,27 +491,27 @@ export default function Checker() {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10 }}>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
+              <button
                 onClick={() => void runAnalysis()}
                 disabled={loading || !text.trim()}
+                className="pnc-btn-primary"
                 style={{
-                  flex: 1, height: 46, fontSize: 15, fontWeight: 700,
-                  background: loading || !text.trim() ? '#b0c4ba' : G.green,
-                  color: G.white, border: 'none', borderRadius: 10,
+                  flex: 1, height: 46, fontSize: 14.5, fontWeight: 700,
+                  background: loading || !text.trim() ? T.inkFaint : T.forestDeep,
+                  color: T.white, border: 'none', borderRadius: 6,
                   cursor: loading || !text.trim() ? 'not-allowed' : 'pointer',
                   minWidth: 'auto',
                 }}
               >
-                {loading ? 'Analyzing…' : '▶ Run Analysis'}
-              </motion.button>
+                {loading ? 'Analyzing…' : 'Run analysis'}
+              </button>
               <button
                 onClick={clearAll}
+                className="pnc-btn-ghost"
                 style={{
                   height: 46, padding: '0 20px', fontSize: 14, fontWeight: 600,
-                  background: G.bg, color: G.textMid,
-                  border: `1px solid ${G.border}`, borderRadius: 10,
+                  background: T.paperDim, color: T.inkSoft,
+                  border: `1px solid ${T.hairline}`, borderRadius: 6,
                   cursor: 'pointer', minWidth: 'auto',
                 }}
               >
@@ -474,7 +525,7 @@ export default function Checker() {
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{ padding: '12px 16px', background: G.redLight, color: G.red, borderRadius: 10, marginBottom: 16, fontSize: 14, border: '1px solid #f5c6cb' }}
+                style={{ padding: '12px 16px', background: T.redTint, color: T.red, borderRadius: 6, marginBottom: 16, fontSize: 14, border: `1px solid ${T.red}33` }}
               >
                 {error}
               </motion.div>
@@ -486,16 +537,16 @@ export default function Checker() {
             {grammarIssues.length > 0 && (
               <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                style={{ background: G.purpleLight, borderRadius: 12, padding: '14px 18px', marginBottom: 16, border: '1px solid #d5c8f5' }}
+                style={{ background: T.plumTint, borderRadius: 8, padding: '14px 18px', marginBottom: 16, border: `1px solid ${T.plum}33` }}
               >
-                <div style={{ fontSize: 12, fontWeight: 700, color: G.purple, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.plum, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                   Grammar hints ({grammarIssues.length})
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: G.textMid, lineHeight: 1.9 }}>
+                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: T.inkSoft, lineHeight: 1.9 }}>
                   {grammarIssues.map((g, i) => (
                     <li key={i}>
                       {g.message}{' '}
-                      <code style={{ background: '#e8dcf7', padding: '1px 7px', borderRadius: 4, fontSize: 12, fontWeight: 700 }}>{g.replacement}</code>
+                      <code style={{ fontFamily: "'IBM Plex Mono', monospace", background: '#e3dcee', padding: '1px 7px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: T.plum }}>{g.replacement}</code>
                     </li>
                   ))}
                 </ul>
@@ -508,27 +559,27 @@ export default function Checker() {
             {analytics && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                 <div style={{
-                  background: G.white, borderRadius: 14, padding: '18px 20px',
-                  border: `1px solid ${G.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                  background: T.white, borderRadius: 8, padding: '18px 20px',
+                  border: `1px solid ${T.hairline}`,
                   marginBottom: 20,
                 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
                     Analysis summary
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
                     <StatPill label="Total"     value={analytics.total_words} />
-                    <StatPill label="Correct"   value={sc.correct    ?? 0} color="#2e7d32" />
-                    <StatPill label="Suggested" value={sc.suggested  ?? 0} color={G.orange} />
-                    <StatPill label="Error"     value={sc.misspelled ?? 0} color={G.red} />
+                    <StatPill label="Correct"   value={sc.correct    ?? 0} color={T.forestDeep} />
+                    <StatPill label="Suggested" value={sc.suggested  ?? 0} color={T.gold} />
+                    <StatPill label="Error"     value={sc.misspelled ?? 0} color={T.red} />
                   </div>
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: G.textMid, paddingTop: 10, borderTop: `1px solid ${G.border}` }}>
-                    <span>Language: <strong style={{ color: G.text }}>{language || analytics.language || '—'}</strong></span>
-                    <span>Correction rate: <strong style={{ color: G.text }}>{(analytics.correction_rate * 100).toFixed(1)}%</strong></span>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: T.inkSoft, paddingTop: 10, borderTop: `1px solid ${T.hairline}` }}>
+                    <span>Language: <strong style={{ color: T.ink }}>{language || analytics.language || '—'}</strong></span>
+                    <span>Correction rate: <strong style={{ color: T.ink }}>{(analytics.correction_rate * 100).toFixed(1)}%</strong></span>
                     {typeof analytics.word_error_rate === 'number' && (
-                      <span>WER: <strong style={{ color: G.text }}>{(analytics.word_error_rate * 100).toFixed(1)}%</strong></span>
+                      <span>WER: <strong style={{ color: T.ink }}>{(analytics.word_error_rate * 100).toFixed(1)}%</strong></span>
                     )}
                     {latencyMs != null && (
-                      <span>Latency: <strong style={{ color: G.text }}>{latencyMs} ms</strong></span>
+                      <span>Latency: <strong style={{ color: T.ink }}>{latencyMs} ms</strong></span>
                     )}
                   </div>
                 </div>
@@ -540,23 +591,24 @@ export default function Checker() {
           <AnimatePresence>
             {results.length > 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div style={{ fontSize: 12, color: G.textMuted, marginBottom: 8 }}>
+                <div style={{ fontSize: 12, color: T.inkFaint, marginBottom: 8 }}>
                   Click any word row to see its suggestions in the panel →
                 </div>
                 <div style={{
-                  background: G.white, borderRadius: 14,
-                  border: `1px solid ${G.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                  background: T.white, borderRadius: 8,
+                  border: `1px solid ${T.hairline}`,
                   overflowX: 'auto',
                 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 0 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ background: G.bg }}>
+                      <tr style={{ background: T.paperDim }}>
                         {['#', 'Word', 'Status', 'Top Suggestion', 'Distance'].map((h, i) => (
                           <th key={i} style={{
                             padding: '12px 14px', textAlign: 'left',
-                            fontSize: 12, fontWeight: 700, color: G.green,
+                            fontFamily: "'IBM Plex Mono', monospace",
+                            fontSize: 11, fontWeight: 600, color: T.forestDeep,
                             textTransform: 'uppercase', letterSpacing: '0.05em',
-                            borderBottom: `2px solid ${G.border}`, whiteSpace: 'nowrap',
+                            borderBottom: `1px solid ${T.hairline}`, whiteSpace: 'nowrap',
                           }}>{h}</th>
                         ))}
                       </tr>
@@ -570,33 +622,32 @@ export default function Checker() {
                           return (
                             <motion.tr
                               key={i}
-                              initial={{ opacity: 0, x: -6 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: i * 0.02 }}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: Math.min(i * 0.015, 0.3) }}
                               onClick={() => setSelectedWordIndex(isSelected ? null : i)}
                               style={{
-                                borderTop: `1px solid ${G.border}`,
+                                borderTop: `1px solid ${T.hairline}`,
                                 cursor: 'pointer',
-                                background: isSelected ? G.greenLight : G.white,
-                                transition: 'background 0.12s',
+                                background: isSelected ? T.forestTint : T.white,
                               }}
                             >
-                              <td style={{ padding: '11px 14px', color: G.textMuted, fontSize: 13 }}>{i + 1}</td>
-                              <td style={{ padding: '11px 14px', fontWeight: 700, color: G.text, fontSize: 14 }}>{res.word}</td>
+                              <td style={{ padding: '11px 14px', color: T.inkFaint, fontSize: 13, fontFamily: "'IBM Plex Mono', monospace" }}>{i + 1}</td>
+                              <td style={{ padding: '11px 14px', fontWeight: 700, color: T.ink, fontSize: 14 }}>{res.word}</td>
                               <td style={{ padding: '11px 14px' }}>
                                 <span style={{
                                   display: 'inline-block', padding: '3px 10px', borderRadius: 99,
-                                  fontSize: 12, fontWeight: 700,
-                                  background: `${statusColor(disp)}18`,
+                                  fontSize: 12, fontWeight: 600,
+                                  background: statusTint(disp),
                                   color: statusColor(disp),
                                 }}>
                                   {statusLabel(disp)}
                                 </span>
                               </td>
-                              <td style={{ padding: '11px 14px', fontSize: 14, color: G.green, fontWeight: 600 }}>
-                                {topSug ? topSug.word : <span style={{ color: G.textMuted }}>—</span>}
+                              <td style={{ padding: '11px 14px', fontSize: 14, color: T.forestDeep, fontWeight: 600 }}>
+                                {topSug ? topSug.word : <span style={{ color: T.inkFaint }}>—</span>}
                               </td>
-                              <td style={{ padding: '11px 14px', fontSize: 13, color: G.textMuted }}>
+                              <td style={{ padding: '11px 14px', fontSize: 13, color: T.inkFaint, fontFamily: "'IBM Plex Mono', monospace" }}>
                                 {topSug ? (topSug.distance ?? topSug.dist ?? '—') : '—'}
                               </td>
                             </motion.tr>
@@ -615,14 +666,16 @@ export default function Checker() {
         <AnimatePresence>
           {selectedWordIndex != null && results[selectedWordIndex] && (
             <motion.div
-              initial={{ opacity: 0, x: 30 }}
+              initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 30 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
               style={{
                 width: 280, flexShrink: 0,
-                background: G.white, borderRadius: 14,
-                borderTop: `5px solid ${G.green}`,
-                boxShadow: '0 8px 28px rgba(0,0,0,0.10)',
+                background: T.white, borderRadius: 8,
+                borderTop: `3px solid ${T.forestDeep}`,
+                border: `1px solid ${T.hairline}`,
+                borderTopWidth: 3, borderTopColor: T.forestDeep,
                 padding: 20,
                 position: 'sticky', top: 24,
                 height: 'fit-content',
@@ -636,20 +689,20 @@ export default function Checker() {
                   <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                       <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: G.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Selected word</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: G.text }}>{res.word}</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Selected word</div>
+                        <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 22, fontWeight: 700, color: T.ink }}>{res.word}</div>
                       </div>
                       <button
                         onClick={() => setSelectedWordIndex(null)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: G.textMuted, fontSize: 20, padding: 0, minWidth: 'auto', height: 'auto', lineHeight: 1 }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.inkFaint, fontSize: 20, padding: 0, minWidth: 'auto', height: 'auto', lineHeight: 1 }}
                       >×</button>
                     </div>
 
                     <div style={{ marginBottom: 14 }}>
                       <span style={{
                         display: 'inline-block', padding: '4px 12px', borderRadius: 99,
-                        fontSize: 13, fontWeight: 700,
-                        background: `${statusColor(disp)}18`,
+                        fontSize: 13, fontWeight: 600,
+                        background: statusTint(disp),
                         color: statusColor(disp),
                       }}>
                         {statusLabel(disp)}
@@ -657,36 +710,37 @@ export default function Checker() {
                     </div>
 
                     {g && (
-                      <div style={{ background: G.purpleLight, borderRadius: 10, padding: '12px 14px', marginBottom: 14, border: '1px solid #d5c8f5' }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: G.purple, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Grammar</div>
-                        <div style={{ fontSize: 13, color: G.textMid, marginBottom: 6 }}>{g.message}</div>
-                        <code style={{ background: '#e8dcf7', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 700, color: G.purple }}>{g.replacement}</code>
+                      <div style={{ background: T.plumTint, borderRadius: 6, padding: '12px 14px', marginBottom: 14, border: `1px solid ${T.plum}33` }}>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600, color: T.plum, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Grammar</div>
+                        <div style={{ fontSize: 13, color: T.inkSoft, marginBottom: 6 }}>{g.message}</div>
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", background: '#e3dcee', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: T.plum }}>{g.replacement}</code>
                       </div>
                     )}
 
                     {res.suggestions && res.suggestions.length > 0 ? (
                       <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: G.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
                           Suggestions
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {res.suggestions.map((s, i) => (
-                            <div key={i} style={{ background: G.bg, borderRadius: 10, padding: '10px 12px', border: `1px solid ${G.border}` }}>
+                            <div key={i} style={{ background: T.paperDim, borderRadius: 6, padding: '10px 12px', border: `1px solid ${T.hairline}` }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: s.error_breakdown ? 6 : 8 }}>
-                                <span style={{ fontWeight: 700, color: G.green, fontSize: 15 }}>{s.word}</span>
-                                <span style={{ fontSize: 11, color: G.textMuted }}>dist: {s.distance ?? s.dist ?? '—'}</span>
+                                <span style={{ fontWeight: 700, color: T.forestDeep, fontSize: 15 }}>{s.word}</span>
+                                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: T.inkFaint }}>dist: {s.distance ?? s.dist ?? '—'}</span>
                               </div>
                               {s.error_breakdown && (
-                                <div style={{ fontSize: 11, color: G.textMuted, marginBottom: 8 }}>
+                                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: T.inkFaint, marginBottom: 8 }}>
                                   sub {s.error_breakdown.substitutions} · ins {s.error_breakdown.insertions} · del {s.error_breakdown.deletions}
                                 </div>
                               )}
                               <button
                                 onClick={() => void applySuggestion(selectedWordIndex, s.word, res.word, res.phrase_span ?? 1)}
+                                className="pnc-btn-primary"
                                 style={{
                                   width: '100%', height: 32, fontSize: 12, fontWeight: 700,
-                                  background: G.green, color: G.white,
-                                  border: 'none', borderRadius: 7,
+                                  background: T.forestDeep, color: T.white,
+                                  border: 'none', borderRadius: 5,
                                   cursor: 'pointer', minWidth: 'auto',
                                 }}
                               >
@@ -697,8 +751,8 @@ export default function Checker() {
                         </div>
                       </div>
                     ) : (
-                      <div style={{ fontSize: 13, color: G.textMuted, textAlign: 'center', padding: '16px 0' }}>
-                        {disp === 'correct' ? '✓ No corrections needed' : 'No suggestions available'}
+                      <div style={{ fontSize: 13, color: T.inkFaint, textAlign: 'center', padding: '16px 0' }}>
+                        {disp === 'correct' ? 'No corrections needed' : 'No suggestions available'}
                       </div>
                     )}
                   </>
