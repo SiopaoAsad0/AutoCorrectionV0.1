@@ -29,15 +29,14 @@ const FONTS_IMPORT = `
   }
   .pnc-password-toggle {
     position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-    height: 32px; padding: 0 12px;
+    width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-    background: transparent; color: ${T.forestDeep};
-    border: none; border-radius: 4px; cursor: pointer;
-    transition: background 0.15s ease;
+    background: transparent; color: ${T.inkSoft};
+    border: none; border-radius: 5px; cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
   }
-  .pnc-password-toggle:hover { background: ${T.hairline}55; }
+  .pnc-password-toggle:hover { background: ${T.hairline}66; color: ${T.forestDeep}; }
+  .pnc-password-toggle svg { width: 18px; height: 18px; display: block; }
 `;
 
 async function hashPassword(password) {
@@ -144,7 +143,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                style={{ paddingRight: 66 }}
+                style={{ paddingRight: 46 }}
               />
               <button
                 type="button"
@@ -153,7 +152,18 @@ export default function Login() {
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 title={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? 'Hide' : 'Show'}
+                {showPassword ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                    <line x1="3" y1="21" x2="21" y2="3" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
               </button>
             </div>
 
