@@ -32,11 +32,16 @@ const FONTS_IMPORT = `
     outline: 2px solid ${T.forest}; outline-offset: 2px;
   }
   .pnc-password-toggle {
-    position: absolute; right: 6px; top: 6px; bottom: 6px;
-    padding: 0 12px; font-size: 12px; font-weight: 600;
-    background: ${T.paper}; color: ${T.inkSoft};
-    border: 1px solid ${T.hairline}; border-radius: 4px; cursor: pointer;
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    height: 32px; padding: 0 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    background: transparent; color: ${T.forestDeep};
+    border: none; border-radius: 4px; cursor: pointer;
+    transition: background 0.15s ease;
   }
+  .pnc-password-toggle:hover { background: ${T.hairline}55; }
 `;
 
 async function hashPassword(password) {
