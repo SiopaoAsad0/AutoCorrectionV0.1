@@ -29,14 +29,21 @@ const FONTS_IMPORT = `
   }
   .pnc-password-toggle {
     position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-    width: 34px; height: 34px;
+    width: 34px; height: 34px; margin: 0; padding: 0; line-height: 0;
+    box-sizing: border-box;
     display: flex; align-items: center; justify-content: center;
     background: transparent; color: ${T.inkSoft};
     border: none; border-radius: 5px; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
     transition: background 0.15s ease, color 0.15s ease;
   }
+  .pnc-password-toggle:hover,
+  .pnc-password-toggle:active,
+  .pnc-password-toggle:focus {
+    transform: translateY(-50%);
+  }
   .pnc-password-toggle:hover { background: ${T.hairline}66; color: ${T.forestDeep}; }
-  .pnc-password-toggle svg { width: 18px; height: 18px; display: block; }
+  .pnc-password-toggle svg { width: 18px; height: 18px; display: block; flex-shrink: 0; }
 `;
 
 async function hashPassword(password) {
