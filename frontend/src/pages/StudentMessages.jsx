@@ -4,19 +4,33 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-const G = {
-  green:      '#00703c',
-  greenLight: '#e8f5ee',
-  greenMid:   '#c8e6d6',
-  red:        '#dc3545',
-  redLight:   '#fdf0f1',
-  text:       '#1a2e24',
-  textMid:    '#4a5c52',
-  textMuted:  '#8a9e94',
-  border:     '#e0ebe4',
-  bg:         '#f5f7f6',
-  white:      '#ffffff',
+/* Same tokens as Landing / Checker / Navbar — lift to src/theme.js. */
+const T = {
+  paper:      '#f2f3ec',
+  paperDim:   '#ebede3',
+  ink:        '#16241d',
+  inkSoft:    '#4b584f',
+  inkFaint:   '#8b9489',
+  forest:     '#1f5c42',
+  forestDeep: '#123a29',
+  forestTint: '#e6ede8',
+  gold:       '#a8842f',
+  goldTint:   '#f7f1e2',
+  red:        '#b3402f',
+  redTint:    '#f7e9e5',
+  hairline:   '#d7d9cd',
+  white:      '#fffdf8',
 };
+
+const FONTS_IMPORT = `
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+  .pnc-messages *:focus-visible { outline: 2px solid ${T.forest}; outline-offset: 2px; }
+  .pnc-messages textarea, .pnc-messages input { font-family: inherit; }
+  .pnc-btn-primary { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .pnc-btn-primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(18,58,41,0.22); }
+  .pnc-btn-ghost { transition: border-color 0.15s ease, background 0.15s ease; }
+  .pnc-btn-ghost:not(:disabled):hover { border-color: ${T.forest} !important; }
+`;
 
 function formatDate(v) {
   if (!v) return '';
@@ -139,27 +153,32 @@ export default function StudentMessages() {
   const pendingCount  = items.filter(m => !m.admin_reply).length;
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 20px 64px', fontFamily: "'Inter','Segoe UI',Roboto,sans-serif" }}>
+    <div className="pnc-messages" style={{ maxWidth: 720, margin: '0 auto', padding: '28px 20px 64px', fontFamily: "'Inter', system-ui, sans-serif", color: T.ink, background: T.paper }}>
+      <style>{FONTS_IMPORT}</style>
 
       {/* ── Page header ── */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
         flexWrap: 'wrap', gap: 12,
-        borderBottom: `4px solid ${G.green}`,
+        borderBottom: `1px solid ${T.hairline}`,
         paddingBottom: 16, marginBottom: 24,
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: G.text }}>Contact Support</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: G.textMuted }}>
-            Send messages and receive admin replies · auto-refreshes every 5 s
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 500, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
+            Support
+          </div>
+          <h1 style={{ margin: 0, fontFamily: "'Source Serif 4', serif", fontSize: '1.45rem', fontWeight: 700, color: T.ink }}>Contact support</h1>
+          <p style={{ margin: '5px 0 0', fontSize: 13, color: T.inkSoft }}>
+            Send messages and receive admin replies — refreshes automatically every 5 seconds.
           </p>
         </div>
         <button
           onClick={() => navigate('/checker')}
+          className="pnc-btn-ghost"
           style={{
-            minWidth: 'auto', height: 34, padding: '0 14px', fontSize: 13,
-            background: G.greenLight, color: G.green,
-            border: `1px solid ${G.greenMid}`, borderRadius: 8, cursor: 'pointer',
+            minWidth: 'auto', height: 34, padding: '0 14px', fontSize: 13, fontWeight: 500,
+            background: T.white, color: T.forestDeep,
+            border: `1.5px solid ${T.hairline}`, borderRadius: 6, cursor: 'pointer',
           }}
         >
           ← Back to checker
@@ -168,13 +187,12 @@ export default function StudentMessages() {
 
       {/* ── Email setup card ── */}
       <div style={{
-        background: G.white, borderRadius: 14, padding: '18px 20px',
-        border: `1px solid ${G.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+        background: T.white, borderRadius: 8, padding: '18px 20px',
+        border: `1px solid ${T.hairline}`,
         marginBottom: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${G.border}` }}>
-          <div style={{ width: 4, height: 16, background: G.green, borderRadius: 2 }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <div style={{ marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${T.hairline}` }}>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Your inbox email
           </span>
         </div>
@@ -185,22 +203,23 @@ export default function StudentMessages() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && saveEmail()}
-            style={{ flex: '1 1 220px', marginBottom: 0, fontSize: 14 }}
+            style={{ flex: '1 1 220px', height: 46, padding: '0 14px', fontSize: 14, borderRadius: 6, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink }}
           />
           <button
             type="button"
             onClick={saveEmail}
             disabled={savingEmail}
+            className="pnc-btn-primary"
             style={{
               minWidth: 'auto', height: 46, padding: '0 18px', fontSize: 13, fontWeight: 700,
-              background: G.green, color: G.white, border: 'none', borderRadius: 10, cursor: 'pointer',
+              background: T.forestDeep, color: T.white, border: 'none', borderRadius: 6, cursor: 'pointer',
             }}
           >
             {savingEmail ? 'Saving…' : 'Save email'}
           </button>
         </div>
         {!canFetch && (
-          <p style={{ margin: '8px 0 0', fontSize: 12, color: G.textMuted }}>
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: T.inkFaint }}>
             Save a valid email to load your conversation history.
           </p>
         )}
@@ -208,13 +227,12 @@ export default function StudentMessages() {
 
       {/* ── Compose card ── */}
       <div style={{
-        background: G.white, borderRadius: 14, padding: '18px 20px',
-        border: `1px solid ${G.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+        background: T.white, borderRadius: 8, padding: '18px 20px',
+        border: `1px solid ${T.hairline}`,
         marginBottom: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${G.border}` }}>
-          <div style={{ width: 4, height: 16, background: G.green, borderRadius: 2 }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <div style={{ marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${T.hairline}` }}>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             New message
           </span>
         </div>
@@ -225,28 +243,29 @@ export default function StudentMessages() {
           placeholder="Type your message to admin here…"
           style={{
             width: '100%', boxSizing: 'border-box',
-            padding: '12px 14px', borderRadius: 10,
-            border: `1.5px solid ${G.border}`,
-            fontFamily: 'inherit', fontSize: 14,
-            lineHeight: 1.6, resize: 'vertical',
+            padding: '12px 14px', borderRadius: 6,
+            border: `1.5px solid ${T.hairline}`,
+            background: T.paper, color: T.ink,
+            fontSize: 14, lineHeight: 1.6, resize: 'vertical',
             marginBottom: 12,
           }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <span style={{ fontSize: 12, color: G.textMuted }}>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: T.inkFaint }}>
             {message.length > 0 ? `${message.length} characters` : 'Keep it clear and concise'}
           </span>
           <button
             onClick={sendMessage}
             disabled={sending || !message.trim()}
+            className="pnc-btn-primary"
             style={{
               minWidth: 'auto', height: 40, padding: '0 22px', fontSize: 14, fontWeight: 700,
-              background: sending || !message.trim() ? '#b0c4ba' : G.green,
-              color: G.white, border: 'none', borderRadius: 9,
+              background: sending || !message.trim() ? T.inkFaint : T.forestDeep,
+              color: T.white, border: 'none', borderRadius: 6,
               cursor: sending || !message.trim() ? 'not-allowed' : 'pointer',
             }}
           >
-            {sending ? 'Sending…' : '↑ Send message'}
+            {sending ? 'Sending…' : 'Send message'}
           </button>
         </div>
       </div>
@@ -256,7 +275,7 @@ export default function StudentMessages() {
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ padding: '12px 16px', background: G.redLight, color: G.red, borderRadius: 10, marginBottom: 14, fontSize: 14, border: '1px solid #f5c6cb' }}
+            style={{ padding: '12px 16px', background: T.redTint, color: T.red, borderRadius: 6, marginBottom: 14, fontSize: 14, border: `1px solid ${T.red}33` }}
           >
             {error}
           </motion.div>
@@ -264,38 +283,35 @@ export default function StudentMessages() {
         {success && (
           <motion.div
             initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ padding: '12px 16px', background: G.greenLight, color: G.green, borderRadius: 10, marginBottom: 14, fontSize: 14, border: `1px solid ${G.greenMid}`, fontWeight: 600 }}
+            style={{ padding: '12px 16px', background: T.forestTint, color: T.forestDeep, borderRadius: 6, marginBottom: 14, fontSize: 14, border: `1px solid ${T.forest}33`, fontWeight: 600 }}
           >
-            ✓ {success}
+            {success}
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* ── Conversation ── */}
       <div style={{
-        background: G.white, borderRadius: 14,
-        border: `1px solid ${G.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+        background: T.white, borderRadius: 8,
+        border: `1px solid ${T.hairline}`,
         overflow: 'hidden',
       }}>
         {/* Conversation header */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '14px 20px', borderBottom: `1px solid ${G.border}`,
-          background: G.bg,
+          padding: '14px 20px', borderBottom: `1px solid ${T.hairline}`,
+          background: T.paperDim,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 4, height: 16, background: G.green, borderRadius: 2 }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Conversation
-            </span>
-          </div>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Conversation
+          </span>
           {items.length > 0 && (
             <div style={{ display: 'flex', gap: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: G.greenLight, color: G.green, border: `1px solid ${G.greenMid}` }}>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: T.forestTint, color: T.forestDeep, border: `1px solid ${T.forest}33` }}>
                 {repliedCount} replied
               </span>
               {pendingCount > 0 && (
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: '#fff8d6', color: '#b8860b', border: '1px solid #ffe58a' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: T.goldTint, color: T.gold, border: `1px solid ${T.gold}44` }}>
                   {pendingCount} pending
                 </span>
               )}
@@ -305,14 +321,14 @@ export default function StudentMessages() {
 
         <div style={{ padding: '16px 20px' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: G.textMuted }}>
-              <div style={{ fontSize: 24, opacity: 0.3, marginBottom: 8 }}>⏳</div>
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: T.inkFaint }}>
+              <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 22, marginBottom: 8 }}>…</div>
               Loading messages…
             </div>
           ) : items.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: G.textMuted }}>
-              <div style={{ fontSize: 36, opacity: 0.2, marginBottom: 10 }}>💬</div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>No messages yet</div>
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: T.inkFaint }}>
+              <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 32, marginBottom: 10, color: T.hairline }}>‡</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: T.inkSoft }}>No messages yet</div>
               <div style={{ fontSize: 13, marginTop: 4 }}>Send one above and we'll get back to you soon.</div>
             </div>
           ) : (
@@ -322,69 +338,65 @@ export default function StudentMessages() {
                   key={m.id}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04 }}
+                  transition={{ delay: Math.min(i * 0.04, 0.3) }}
                   style={{
-                    borderRadius: 12,
-                    border: `1px solid ${G.border}`,
+                    borderRadius: 6,
+                    border: `1px solid ${T.hairline}`,
                     overflow: 'hidden',
                   }}
                 >
                   {/* Message header */}
                   <div style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '10px 14px', background: G.bg,
-                    borderBottom: `1px solid ${G.border}`,
+                    padding: '10px 14px', background: T.paperDim,
+                    borderBottom: `1px solid ${T.hairline}`,
                   }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: G.textMid }}>Your message</span>
-                    <span style={{ fontSize: 11, color: G.textMuted }}>{formatDate(m.created_at)}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: T.inkSoft }}>Your message</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: T.inkFaint }}>{formatDate(m.created_at)}</span>
                   </div>
 
                   {/* Message body */}
                   <div style={{
                     padding: '12px 14px',
                     fontSize: 14, lineHeight: 1.7,
-                    color: G.text, whiteSpace: 'pre-wrap',
+                    color: T.ink, whiteSpace: 'pre-wrap',
                   }}>
                     {m.message}
                   </div>
 
                   {/* Admin reply */}
                   {m.admin_reply ? (
-                    <div style={{
-                      borderTop: `1px solid ${G.border}`,
-                      background: G.greenLight,
-                    }}>
+                    <div style={{ borderTop: `1px solid ${T.hairline}`, background: T.forestTint }}>
                       <div style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '10px 14px', borderBottom: `1px solid ${G.greenMid}`,
+                        padding: '10px 14px', borderBottom: `1px solid ${T.forest}22`,
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                           <div style={{
-                            width: 22, height: 22, borderRadius: '50%',
-                            background: G.green, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 11, color: G.white, fontWeight: 800,
+                            width: 20, height: 20, borderRadius: 4,
+                            border: `1.5px solid ${T.forestDeep}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontFamily: "'Source Serif 4', serif", fontSize: 11, color: T.forestDeep, fontWeight: 700,
                           }}>A</div>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: G.green }}>Admin reply</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: T.forestDeep }}>Admin reply</span>
                         </div>
-                        <span style={{ fontSize: 11, color: G.textMuted }}>{formatDate(m.replied_at)}</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: T.inkFaint }}>{formatDate(m.replied_at)}</span>
                       </div>
                       <div style={{
                         padding: '12px 14px',
                         fontSize: 14, lineHeight: 1.7,
-                        color: G.textMid, whiteSpace: 'pre-wrap',
+                        color: T.inkSoft, whiteSpace: 'pre-wrap',
                       }}>
                         {m.admin_reply}
                       </div>
                     </div>
                   ) : (
                     <div style={{
-                      borderTop: `1px solid ${G.border}`,
+                      borderTop: `1px solid ${T.hairline}`,
                       padding: '10px 14px',
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      background: '#fffdf0',
+                      background: T.goldTint,
                     }}>
-                      <span style={{ fontSize: 12 }}>⏳</span>
-                      <span style={{ fontSize: 12, color: '#b8860b', fontWeight: 600 }}>Waiting for admin reply…</span>
+                      <span style={{ fontSize: 12, color: T.gold, fontWeight: 600 }}>Waiting for admin reply…</span>
                     </div>
                   )}
                 </motion.div>
