@@ -1,58 +1,69 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+const G = {
+  green:      '#00703c',
+  greenLight: '#e8f5ee',
+  greenMid:   '#c8e6d6',
+  red:        '#dc3545',
+  redLight:   '#fdf0f1',
+  text:       '#1a2e24',
+  textMid:    '#4a5c52',
+  textMuted:  '#8a9e94',
+  border:     '#e0ebe4',
+  bg:         '#f5f7f6',
+  white:      '#ffffff',
+};
+
+function formatDate(v) {
+  if (!v) return '';
+  return new Date(v).toLocaleString('en-PH', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
 export default function StudentMessages() {
-  const [student, setStudent] = useState(null);
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
+  const [student,     setStudent]     = useState(null);
+  const [email,       setEmail]       = useState('');
+  const [message,     setMessage]     = useState('');
+  const [items,       setItems]       = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [sending,     setSending]     = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [error,       setError]       = useState(null);
+  const [success,     setSuccess]     = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const studentId = localStorage.getItem('pnc_user');
     if (!studentId || localStorage.getItem('isLoggedIn') !== 'true') {
-      navigate('/login', { replace: true });
-      return;
+      navigate('/login', { replace: true }); return;
     }
     const savedData = localStorage.getItem(`student_${studentId}`);
-    if (!savedData) {
-      navigate('/login', { replace: true });
-      return;
-    }
+    if (!savedData) { navigate('/login', { replace: true }); return; }
     try {
       const parsed = JSON.parse(savedData);
       setStudent(parsed);
       setEmail(parsed.email || '');
-    } catch {
-      navigate('/login', { replace: true });
-    }
+    } catch { navigate('/login', { replace: true }); }
   }, [navigate]);
 
   const canFetch = useMemo(() => /\S+@\S+\.\S+/.test(email.trim()), [email]);
 
   const loadMessages = useCallback(async () => {
-    if (!canFetch) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
-
+    if (!canFetch) { setItems([]); setLoading(false); return; }
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/contact/messages?email=${encodeURIComponent(email.trim())}`, {
-        headers: { Accept: 'application/json' },
-      });
+      const res = await fetch(
+        `${API_BASE}/api/contact/messages?email=${encodeURIComponent(email.trim())}`,
+        { headers: { Accept: 'application/json' } }
+      );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.message || `Could not load messages (${res.status})`);
-      }
+      if (!res.ok) throw new Error(data.message || `Could not load messages (${res.status})`);
       setItems(data.data || []);
     } catch (e) {
       setError(e.message || 'Failed to load conversation.');
@@ -65,34 +76,27 @@ export default function StudentMessages() {
     if (!student) return;
     setLoading(true);
     loadMessages();
-    const intervalId = setInterval(() => {
-      loadMessages();
-    }, 5000);
-    return () => clearInterval(intervalId);
+    const id = setInterval(loadMessages, 5000);
+    return () => clearInterval(id);
   }, [student, loadMessages]);
 
   const saveEmail = () => {
     if (!student) return;
     const normalized = email.trim();
     if (!/\S+@\S+\.\S+/.test(normalized)) {
-      setError('Please enter a valid email before saving.');
-      return;
+      setError('Please enter a valid email before saving.'); return;
     }
     const studentId = localStorage.getItem('pnc_user');
     if (!studentId) return;
-
-    setSavingEmail(true);
-    setError(null);
+    setSavingEmail(true); setError(null);
     try {
       const next = { ...student, email: normalized };
       localStorage.setItem(`student_${studentId}`, JSON.stringify(next));
       setStudent(next);
-      setSuccess('Email saved. Your inbox now syncs with admin replies.');
-    } catch {
-      setError('Could not save email locally.');
-    } finally {
-      setSavingEmail(false);
-    }
+      setSuccess('Email saved — your inbox now syncs with admin replies.');
+      setTimeout(() => setSuccess(null), 3500);
+    } catch { setError('Could not save email locally.'); }
+    finally { setSavingEmail(false); }
   };
 
   const sendMessage = async (e) => {
@@ -100,18 +104,11 @@ export default function StudentMessages() {
     if (!student) return;
     const body = message.trim();
     const normalizedEmail = email.trim();
-    if (!body) {
-      setError('Type a message first.');
-      return;
-    }
+    if (!body) { setError('Type a message first.'); return; }
     if (!/\S+@\S+\.\S+/.test(normalizedEmail)) {
-      setError('Enter and save a valid email first.');
-      return;
+      setError('Enter and save a valid email first.'); return;
     }
-
-    setError(null);
-    setSuccess(null);
-    setSending(true);
+    setError(null); setSuccess(null); setSending(true);
     try {
       const res = await fetch(`${API_BASE}/api/contact`, {
         method: 'POST',
@@ -124,94 +121,277 @@ export default function StudentMessages() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg =
-          data.message ||
+        const msg = data.message ||
           (data.errors && Object.values(data.errors).flat().join(' ')) ||
           `Could not send (${res.status})`;
         throw new Error(msg);
       }
       setMessage('');
-      setSuccess('Message sent. Admin reply will appear here automatically.');
+      setSuccess('Message sent — admin reply will appear here automatically.');
+      setTimeout(() => setSuccess(null), 4000);
       await loadMessages();
     } catch (e2) {
       setError(e2.message || 'Failed to send message.');
-    } finally {
-      setSending(false);
-    }
+    } finally { setSending(false); }
   };
 
-  return (
-    <div style={{ maxWidth: 900, margin: '24px auto', padding: '0 20px 40px' }}>
-      <header style={{ borderBottom: '4px solid #00703c', marginBottom: 16, paddingBottom: 12 }}>
-        <h1 style={{ margin: 0, color: '#122018', fontSize: '1.5rem' }}>Contact support</h1>
-        <p style={{ margin: '6px 0 0', color: '#666' }}>Send messages and receive admin replies here (auto-refresh every 5s).</p>
-      </header>
+  const repliedCount  = items.filter(m => m.admin_reply).length;
+  const pendingCount  = items.filter(m => !m.admin_reply).length;
 
-      <div style={{ background: '#fff', borderRadius: 12, padding: 14, marginBottom: 14, boxShadow: '0 6px 20px rgba(0,0,0,0.06)' }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#333', marginBottom: 6 }}>
-          Your inbox email
-        </label>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+  return (
+    <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 20px 64px', fontFamily: "'Inter','Segoe UI',Roboto,sans-serif" }}>
+
+      {/* ── Page header ── */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        flexWrap: 'wrap', gap: 12,
+        borderBottom: `4px solid ${G.green}`,
+        paddingBottom: 16, marginBottom: 24,
+      }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: G.text }}>Contact Support</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: G.textMuted }}>
+            Send messages and receive admin replies · auto-refreshes every 5 s
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/checker')}
+          style={{
+            minWidth: 'auto', height: 34, padding: '0 14px', fontSize: 13,
+            background: G.greenLight, color: G.green,
+            border: `1px solid ${G.greenMid}`, borderRadius: 8, cursor: 'pointer',
+          }}
+        >
+          ← Back to checker
+        </button>
+      </div>
+
+      {/* ── Email setup card ── */}
+      <div style={{
+        background: G.white, borderRadius: 14, padding: '18px 20px',
+        border: `1px solid ${G.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+        marginBottom: 16,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${G.border}` }}>
+          <div style={{ width: 4, height: 16, background: G.green, borderRadius: 2 }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Your inbox email
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <input
             type="email"
-            placeholder="Enter your email"
+            placeholder="you@email.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ flex: '1 1 260px' }}
+            onChange={e => setEmail(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && saveEmail()}
+            style={{ flex: '1 1 220px', marginBottom: 0, fontSize: 14 }}
           />
-          <button type="button" onClick={saveEmail} disabled={savingEmail} style={{ width: 'auto' }}>
+          <button
+            type="button"
+            onClick={saveEmail}
+            disabled={savingEmail}
+            style={{
+              minWidth: 'auto', height: 46, padding: '0 18px', fontSize: 13, fontWeight: 700,
+              background: G.green, color: G.white, border: 'none', borderRadius: 10, cursor: 'pointer',
+            }}
+          >
             {savingEmail ? 'Saving…' : 'Save email'}
           </button>
-          <button type="button" onClick={() => navigate('/checker')} style={{ width: 'auto', background: '#6c757d' }}>
-            Back to checker
+        </div>
+        {!canFetch && (
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: G.textMuted }}>
+            Save a valid email to load your conversation history.
+          </p>
+        )}
+      </div>
+
+      {/* ── Compose card ── */}
+      <div style={{
+        background: G.white, borderRadius: 14, padding: '18px 20px',
+        border: `1px solid ${G.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+        marginBottom: 16,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${G.border}` }}>
+          <div style={{ width: 4, height: 16, background: G.green, borderRadius: 2 }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            New message
+          </span>
+        </div>
+        <textarea
+          rows={4}
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          placeholder="Type your message to admin here…"
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            padding: '12px 14px', borderRadius: 10,
+            border: `1.5px solid ${G.border}`,
+            fontFamily: 'inherit', fontSize: 14,
+            lineHeight: 1.6, resize: 'vertical',
+            marginBottom: 12,
+          }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <span style={{ fontSize: 12, color: G.textMuted }}>
+            {message.length > 0 ? `${message.length} characters` : 'Keep it clear and concise'}
+          </span>
+          <button
+            onClick={sendMessage}
+            disabled={sending || !message.trim()}
+            style={{
+              minWidth: 'auto', height: 40, padding: '0 22px', fontSize: 14, fontWeight: 700,
+              background: sending || !message.trim() ? '#b0c4ba' : G.green,
+              color: G.white, border: 'none', borderRadius: 9,
+              cursor: sending || !message.trim() ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {sending ? 'Sending…' : '↑ Send message'}
           </button>
         </div>
       </div>
 
-      <form onSubmit={sendMessage} style={{ background: '#fff', borderRadius: 12, padding: 14, marginBottom: 16, boxShadow: '0 6px 20px rgba(0,0,0,0.06)' }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#333', marginBottom: 6 }}>Message</label>
-        <textarea
-          rows={4}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type your message to admin..."
-          style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
-        />
-        <button type="submit" disabled={sending} style={{ marginTop: 10, width: 'auto' }}>
-          {sending ? 'Sending…' : 'Send message'}
-        </button>
-      </form>
-
-      {error && <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: '#fee', color: '#c00' }}>{error}</div>}
-      {success && <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, background: '#ecfff2', color: '#075' }}>{success}</div>}
-
-      <div style={{ background: '#fff', borderRadius: 12, padding: 14, boxShadow: '0 6px 20px rgba(0,0,0,0.06)' }}>
-        <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Conversation</h2>
-        {loading ? (
-          <p style={{ color: '#666' }}>Loading messages…</p>
-        ) : items.length === 0 ? (
-          <p style={{ color: '#666' }}>No messages yet. Send one above.</p>
-        ) : (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 12 }}>
-            {items.map((m) => (
-              <li key={m.id} style={{ border: '1px solid #e6ece8', borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>{m.created_at ? new Date(m.created_at).toLocaleString() : ''}</div>
-                <div style={{ whiteSpace: 'pre-wrap', marginBottom: 10 }}>{m.message}</div>
-                {m.admin_reply ? (
-                  <div style={{ background: '#f0fcf4', borderRadius: 8, padding: 10 }}>
-                    <div style={{ fontWeight: 700, color: '#00703c', marginBottom: 4 }}>Admin reply</div>
-                    <div style={{ whiteSpace: 'pre-wrap' }}>{m.admin_reply}</div>
-                    {m.replied_at && (
-                      <div style={{ fontSize: 11, color: '#777', marginTop: 6 }}>{new Date(m.replied_at).toLocaleString()}</div>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, color: '#999' }}>Waiting for admin reply…</div>
-                )}
-              </li>
-            ))}
-          </ul>
+      {/* ── Feedback banners ── */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{ padding: '12px 16px', background: G.redLight, color: G.red, borderRadius: 10, marginBottom: 14, fontSize: 14, border: '1px solid #f5c6cb' }}
+          >
+            {error}
+          </motion.div>
         )}
+        {success && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{ padding: '12px 16px', background: G.greenLight, color: G.green, borderRadius: 10, marginBottom: 14, fontSize: 14, border: `1px solid ${G.greenMid}`, fontWeight: 600 }}
+          >
+            ✓ {success}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Conversation ── */}
+      <div style={{
+        background: G.white, borderRadius: 14,
+        border: `1px solid ${G.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+        overflow: 'hidden',
+      }}>
+        {/* Conversation header */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '14px 20px', borderBottom: `1px solid ${G.border}`,
+          background: G.bg,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 4, height: 16, background: G.green, borderRadius: 2 }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Conversation
+            </span>
+          </div>
+          {items.length > 0 && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: G.greenLight, color: G.green, border: `1px solid ${G.greenMid}` }}>
+                {repliedCount} replied
+              </span>
+              {pendingCount > 0 && (
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99, background: '#fff8d6', color: '#b8860b', border: '1px solid #ffe58a' }}>
+                  {pendingCount} pending
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: '16px 20px' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: G.textMuted }}>
+              <div style={{ fontSize: 24, opacity: 0.3, marginBottom: 8 }}>⏳</div>
+              Loading messages…
+            </div>
+          ) : items.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: G.textMuted }}>
+              <div style={{ fontSize: 36, opacity: 0.2, marginBottom: 10 }}>💬</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>No messages yet</div>
+              <div style={{ fontSize: 13, marginTop: 4 }}>Send one above and we'll get back to you soon.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {items.map((m, i) => (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  style={{
+                    borderRadius: 12,
+                    border: `1px solid ${G.border}`,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Message header */}
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 14px', background: G.bg,
+                    borderBottom: `1px solid ${G.border}`,
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: G.textMid }}>Your message</span>
+                    <span style={{ fontSize: 11, color: G.textMuted }}>{formatDate(m.created_at)}</span>
+                  </div>
+
+                  {/* Message body */}
+                  <div style={{
+                    padding: '12px 14px',
+                    fontSize: 14, lineHeight: 1.7,
+                    color: G.text, whiteSpace: 'pre-wrap',
+                  }}>
+                    {m.message}
+                  </div>
+
+                  {/* Admin reply */}
+                  {m.admin_reply ? (
+                    <div style={{
+                      borderTop: `1px solid ${G.border}`,
+                      background: G.greenLight,
+                    }}>
+                      <div style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '10px 14px', borderBottom: `1px solid ${G.greenMid}`,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{
+                            width: 22, height: 22, borderRadius: '50%',
+                            background: G.green, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 11, color: G.white, fontWeight: 800,
+                          }}>A</div>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: G.green }}>Admin reply</span>
+                        </div>
+                        <span style={{ fontSize: 11, color: G.textMuted }}>{formatDate(m.replied_at)}</span>
+                      </div>
+                      <div style={{
+                        padding: '12px 14px',
+                        fontSize: 14, lineHeight: 1.7,
+                        color: G.textMid, whiteSpace: 'pre-wrap',
+                      }}>
+                        {m.admin_reply}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      borderTop: `1px solid ${G.border}`,
+                      padding: '10px 14px',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: '#fffdf0',
+                    }}>
+                      <span style={{ fontSize: 12 }}>⏳</span>
+                      <span style={{ fontSize: 12, color: '#b8860b', fontWeight: 600 }}>Waiting for admin reply…</span>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
