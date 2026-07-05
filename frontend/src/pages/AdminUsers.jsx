@@ -12,41 +12,58 @@ function authHeaders() {
   };
 }
 
-const G = {
-  green:      '#00703c',
-  greenLight: '#e8f5ee',
-  greenMid:   '#c8e6d6',
-  red:        '#dc3545',
-  redLight:   '#fdf0f1',
-  blue:       '#0277bd',
-  blueLight:  '#e3f2fd',
-  purple:     '#6f42c1',
-  purpleLight:'#f3f0fb',
-  text:       '#1a2e24',
-  textMid:    '#4a5c52',
-  textMuted:  '#8a9e94',
-  border:     '#e0ebe4',
-  bg:         '#f5f7f6',
-  white:      '#ffffff',
+/* Same manuscript tokens as AdminReports / Landing / Profile. */
+const T = {
+  paper:      '#f2f3ec',
+  paperDim:   '#ebede3',
+  ink:        '#16241d',
+  inkSoft:    '#4b584f',
+  inkFaint:   '#8b9489',
+  forest:     '#1f5c42',
+  forestDeep: '#123a29',
+  forestTint: '#e6ede8',
+  gold:       '#a8842f',
+  goldTint:   '#f5eed9',
+  red:        '#b3402f',
+  redTint:    '#f7e9e5',
+  plum:       '#5c4a6e',
+  plumTint:   '#eeeaf1',
+  slate:      '#33546b',
+  slateTint:  '#e8eef2',
+  hairline:   '#d7d9cd',
+  white:      '#fffdf8',
 };
 
-const btn = (bg, color, border) => ({
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  height: 36, padding: '0 16px', fontSize: 13, fontWeight: 600,
-  background: bg, color, border: `1px solid ${border || bg}`,
-  borderRadius: 8, cursor: 'pointer', minWidth: 'auto',
-  textDecoration: 'none', whiteSpace: 'nowrap',
-});
+const FONTS_IMPORT = `
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+  .pnc-admin * { box-sizing: border-box; }
+  .pnc-admin *:focus-visible { outline: 2px solid ${T.forest}; outline-offset: 2px; }
+  .pnc-admin table { width: 100%; border-collapse: collapse; }
+  .pnc-nav-pill { transition: color 0.15s ease; }
+  .pnc-nav-pill:hover { color: ${T.forestDeep} !important; }
+  .pnc-refresh-btn { transition: transform 0.15s ease; }
+  .pnc-refresh-btn:hover { transform: translateY(-1px); }
+  .pnc-field-admin { transition: border-color 0.15s ease; }
+  .pnc-field-admin:focus { border-color: ${T.forest} !important; }
+  .pnc-row-hover:hover { background: ${T.paperDim}; }
+  @media (prefers-reduced-motion: reduce) {
+    .pnc-admin * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+`;
+
+const navPill = {
+  fontSize: 13, fontWeight: 600, color: T.inkSoft, textDecoration: 'none',
+};
 
 function RoleBadge({ role }) {
   const isAdmin = role === 'Admin';
+  const color = isAdmin ? T.plum : T.forestDeep;
+  const bg = isAdmin ? T.plumTint : T.forestTint;
   return (
     <span style={{
-      display: 'inline-block', padding: '3px 10px', borderRadius: 99,
-      fontSize: 11, fontWeight: 700,
-      background: isAdmin ? G.purpleLight : G.greenLight,
-      color: isAdmin ? G.purple : G.green,
-      border: `1px solid ${isAdmin ? '#d5c8f5' : G.greenMid}`,
+      display: 'inline-block', padding: '2px 9px', borderRadius: 3,
+      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600,
+      background: bg, color, letterSpacing: '0.01em',
     }}>
       {role}
     </span>
@@ -55,18 +72,43 @@ function RoleBadge({ role }) {
 
 function SourceBadge({ source }) {
   const isLocal = source === 'Local signup';
+  const color = isLocal ? T.gold : T.slate;
+  const bg = isLocal ? T.goldTint : T.slateTint;
   return (
     <span style={{
-      display: 'inline-block', padding: '3px 10px', borderRadius: 99,
-      fontSize: 11, fontWeight: 700,
-      background: isLocal ? '#fff8d6' : G.blueLight,
-      color: isLocal ? '#b8860b' : G.blue,
-      border: `1px solid ${isLocal ? '#ffe58a' : '#b3d9f5'}`,
+      display: 'inline-block', padding: '2px 9px', borderRadius: 3,
+      fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600,
+      background: bg, color, letterSpacing: '0.01em',
     }}>
       {source}
     </span>
   );
 }
+
+function SummaryCard({ label, value, color, mark }) {
+  return (
+    <div style={{
+      flex: 1, minWidth: 140, background: T.white, borderRadius: 8,
+      border: `1px solid ${T.hairline}`, borderTop: `3px solid ${color}`,
+      padding: '16px 18px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, fontWeight: 600, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          {label}
+        </div>
+        {mark && <span style={{ fontFamily: "'Source Serif 4', serif", fontSize: 15, fontWeight: 700, color, opacity: 0.55 }}>{mark}</span>}
+      </div>
+      <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 24, fontWeight: 700, color: T.ink }}>{value}</div>
+    </div>
+  );
+}
+
+const thStyle = (align = 'left') => ({
+  color: T.forestDeep, padding: '11px 16px', textAlign: align,
+  fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, fontWeight: 600,
+  textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap',
+});
+const tdStyle = (align = 'left') => ({ padding: '12px 16px', textAlign: align, fontSize: 13.5 });
 
 export default function AdminUsers() {
   const [items,   setItems]   = useState([]);
@@ -136,139 +178,141 @@ export default function AdminUsers() {
   const students = items.filter(u => u.role === 'Student').length;
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 20px 64px', fontFamily: "'Inter','Segoe UI',Roboto,sans-serif" }}>
+    <div className="pnc-admin" style={{ minHeight: '100vh', background: T.paper, fontFamily: "'Inter', system-ui, sans-serif", color: T.ink }}>
+      <style>{FONTS_IMPORT}</style>
 
-      {/* ── Header ── */}
-      <header style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        flexWrap: 'wrap', gap: 12,
-        borderBottom: `4px solid ${G.green}`,
-        paddingBottom: 16, marginBottom: 28,
-      }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: G.green, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
-            Admin Panel
-          </div>
-          <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: G.text }}>Users</h1>
-          <p style={{ margin: '5px 0 0', fontSize: 14, color: G.textMuted }}>Registered accounts in the system</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Link to="/admin/messages"      style={btn(G.greenLight, G.green, G.greenMid)}>Messages</Link>
-          <Link to="/admin/dictionary/add" style={btn(G.greenLight, G.green, G.greenMid)}>Dictionary</Link>
-          <Link to="/admin/reports"        style={btn(G.greenLight, G.green, G.greenMid)}>Reports</Link>
-          <Link to="/"                     style={btn(G.greenLight, G.green, G.greenMid)}>Home</Link>
-          <button onClick={load} disabled={loading}
-            style={{ ...btn(G.greenLight, G.green, G.greenMid), border: `1px solid ${G.greenMid}` }}>
-            ↻ Refresh
-          </button>
-        </div>
-      </header>
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px 72px' }}>
 
-      {/* ── Summary cards ── */}
-      {!loading && items.length > 0 && (
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-          {[
-            { label: 'Total users',  value: items.length, color: G.green },
-            { label: 'Admins',       value: admins,        color: G.purple },
-            { label: 'Students',     value: students,      color: G.blue },
-          ].map((s, i) => (
-            <div key={i} style={{
-              flex: 1, minWidth: 120,
-              background: G.white, borderRadius: 12, padding: '14px 18px',
-              borderTop: `3px solid ${s.color}`,
-              boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-              border: `1px solid ${G.border}`, borderTopColor: s.color,
+        {/* ── Header ── */}
+        <header style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+          flexWrap: 'wrap', gap: 16, borderBottom: `3px solid ${T.gold}`, paddingBottom: 20, marginBottom: 32,
+        }}>
+          <div>
+            <div style={{
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep,
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10,
+              display: 'flex', alignItems: 'center', gap: 8,
             }}>
-              <div style={{ fontSize: 11, color: G.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: G.text }}>{s.value}</div>
+              <span style={{ width: 18, height: 1, background: T.forestDeep, display: 'inline-block' }} />
+              Admin panel
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Search ── */}
-      {!loading && items.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name, email, or role…"
-            style={{ maxWidth: 360, marginBottom: 0, fontSize: 14 }}
-          />
-        </div>
-      )}
-
-      {/* ── Error ── */}
-      {error && (
-        <div style={{ padding: 14, background: G.redLight, color: G.red, borderRadius: 10, marginBottom: 20, fontSize: 14, border: '1px solid #f5c6cb' }}>
-          {error}
-        </div>
-      )}
-
-      {/* ── States ── */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: G.textMuted }}>
-          <div style={{ fontSize: 28, opacity: 0.3, marginBottom: 10 }}>⏳</div>
-          Loading users…
-        </div>
-      ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: G.textMuted }}>
-          <div style={{ fontSize: 36, opacity: 0.25, marginBottom: 10 }}>👤</div>
-          {search ? 'No users match your search.' : 'No users found.'}
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto', background: G.white, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: `1px solid ${G.border}` }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 0 }}>
-            <thead>
-              <tr style={{ background: G.bg }}>
-                {['#', 'Name', 'Email / Username', 'Role', 'Source', 'Created'].map((h, i) => (
-                  <th key={i} style={{
-                    padding: '12px 16px', textAlign: 'left',
-                    fontSize: 12, fontWeight: 700, color: G.green,
-                    textTransform: 'uppercase', letterSpacing: '0.05em',
-                    whiteSpace: 'nowrap', borderBottom: `2px solid ${G.border}`,
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((u, i) => (
-                <motion.tr
-                  key={u.id}
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.02 }}
-                  style={{ borderTop: `1px solid ${G.border}` }}
-                >
-                  <td style={{ padding: '12px 16px', color: G.textMuted, fontSize: 13 }}>{i + 1}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-                        background: G.greenLight, border: `2px solid ${G.greenMid}`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 800, fontSize: 13, color: G.green,
-                      }}>
-                        {(u.name || '?').charAt(0).toUpperCase()}
-                      </div>
-                      <span style={{ fontWeight: 600, color: G.text, fontSize: 14 }}>{u.name || '—'}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '12px 16px', fontSize: 14, color: G.textMid }}>{u.account}</td>
-                  <td style={{ padding: '12px 16px' }}><RoleBadge role={u.role} /></td>
-                  <td style={{ padding: '12px 16px' }}><SourceBadge source={u.source} /></td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: G.textMuted, whiteSpace: 'nowrap' }}>
-                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ padding: '10px 16px', borderTop: `1px solid ${G.border}`, fontSize: 12, color: G.textMuted }}>
-            Showing {filtered.length} of {items.length} users
+            <h1 style={{ margin: 0, fontFamily: "'Source Serif 4', serif", fontSize: '1.8rem', fontWeight: 700, color: T.ink }}>Users</h1>
+            <p style={{ margin: '6px 0 0', fontSize: 14, color: T.inkSoft }}>Registered accounts in the system</p>
           </div>
-        </div>
-      )}
+          <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link to="/admin/messages" className="pnc-nav-pill" style={navPill}>Messages</Link>
+            <Link to="/admin/dictionary/add" className="pnc-nav-pill" style={navPill}>Dictionary</Link>
+            <Link to="/admin/reports" className="pnc-nav-pill" style={navPill}>Reports</Link>
+            <Link to="/" className="pnc-nav-pill" style={navPill}>Home</Link>
+            <button
+              onClick={load}
+              disabled={loading}
+              className="pnc-refresh-btn"
+              style={{
+                minWidth: 'auto', height: 38, padding: '0 16px', fontSize: 12.5, fontWeight: 700,
+                background: T.forestTint, color: T.forestDeep, border: `1.5px solid ${T.forest}33`,
+                borderRadius: 6, cursor: 'pointer',
+              }}
+            >
+              Refresh
+            </button>
+          </div>
+        </header>
+
+        {/* ── Summary cards ── */}
+        {!loading && items.length > 0 && (
+          <div style={{ display: 'flex', gap: 14, marginBottom: 24, flexWrap: 'wrap' }}>
+            <SummaryCard label="Total users" value={items.length} color={T.forestDeep} mark="№" />
+            <SummaryCard label="Admins"      value={admins}       color={T.plum}       mark="§" />
+            <SummaryCard label="Students"    value={students}     color={T.slate}      mark="○" />
+          </div>
+        )}
+
+        {/* ── Search ── */}
+        {!loading && items.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by name, email, or role…"
+              className="pnc-field-admin"
+              style={{
+                maxWidth: 360, width: '100%', padding: '11px 14px', fontSize: 14, borderRadius: 5,
+                border: `1.5px solid ${T.hairline}`, background: T.white, color: T.ink, fontFamily: 'inherit',
+              }}
+            />
+          </div>
+        )}
+
+        {/* ── Error ── */}
+        {error && (
+          <div style={{ padding: '14px 16px', background: T.redTint, color: T.red, borderRadius: 6, marginBottom: 24, fontSize: 14, border: `1px solid ${T.red}33` }}>
+            {error}
+          </div>
+        )}
+
+        {/* ── States ── */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '80px 20px', color: T.inkFaint }}>
+            <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 22, marginBottom: 10 }}>···</div>
+            Loading users…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ background: T.white, borderRadius: 8, border: `1px solid ${T.hairline}`, textAlign: 'center', padding: '60px 20px', color: T.inkFaint }}>
+            <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 28, marginBottom: 10, color: T.hairline }}>—</div>
+            {search ? 'No users match your search.' : 'No users found.'}
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto', background: T.white, borderRadius: 8, border: `1px solid ${T.hairline}` }}>
+            <table>
+              <thead>
+                <tr style={{ background: T.paperDim }}>
+                  {['#', 'Name', 'Email / username', 'Role', 'Source', 'Created'].map((h, i) => (
+                    <th key={i} style={thStyle('left')}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((u, i) => (
+                  <motion.tr
+                    key={u.id}
+                    className="pnc-row-hover"
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.02 }}
+                    style={{ borderTop: `1px solid ${T.hairline}` }}
+                  >
+                    <td style={{ ...tdStyle('left'), color: T.inkFaint, fontSize: 12.5 }}>{i + 1}</td>
+                    <td style={tdStyle('left')}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                          border: `1.5px solid ${T.forest}`, background: T.forestTint,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontFamily: "'Source Serif 4', serif", fontWeight: 700, fontSize: 13, color: T.forestDeep,
+                        }}>
+                          {(u.name || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontWeight: 600, color: T.ink, fontSize: 14 }}>{u.name || '—'}</span>
+                      </div>
+                    </td>
+                    <td style={{ ...tdStyle('left'), color: T.inkSoft }}>{u.account}</td>
+                    <td style={tdStyle('left')}><RoleBadge role={u.role} /></td>
+                    <td style={tdStyle('left')}><SourceBadge source={u.source} /></td>
+                    <td style={{ ...tdStyle('left'), fontSize: 12, color: T.inkFaint, whiteSpace: 'nowrap' }}>
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ padding: '11px 16px', borderTop: `1px solid ${T.hairline}`, fontSize: 12, color: T.inkFaint }}>
+              Showing {filtered.length} of {items.length} users
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
