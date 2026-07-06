@@ -31,18 +31,13 @@ const FONTS_IMPORT = `
   .pnc-signup button:focus-visible, .pnc-signup a:focus-visible, .pnc-signup input:focus-visible {
     outline: 2px solid ${T.forest}; outline-offset: 2px;
   }
-  .pnc-password-toggle {
+  .pnc-password-select {
     position: absolute; right: 6px; top: 0; bottom: 0; margin: auto 0;
-    width: 34px; height: 34px; padding: 0; line-height: 0;
+    height: 32px !important; width: 88px;
+    padding: 0 10px !important; font-size: 12px !important; font-weight: 600;
     box-sizing: border-box;
-    display: flex; align-items: center; justify-content: center;
-    background: transparent; color: ${T.inkSoft};
-    border: none; border-radius: 5px; cursor: pointer;
-    appearance: none; -webkit-appearance: none;
-    transition: background 0.15s ease, color 0.15s ease;
   }
-  .pnc-password-toggle:hover { background: ${T.hairline}66; color: ${T.forestDeep}; }
-  .pnc-password-toggle svg { width: 18px; height: 18px; display: block; flex-shrink: 0; }
+  .pnc-password-select:hover { border-color: ${T.forest}; }
 `;
 
 async function hashPassword(password) {
@@ -83,10 +78,6 @@ export default function Signup() {
     setFormError(null);
     if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.id || !formData.email || !formData.section || !formData.password) {
       setFormError('Please fill in all required fields (first name, last name, student ID, email, section, password).');
-      return;
-    }
-    if (formData.id.length !== 7) {
-      setFormError('Student ID must be exactly 7 digits.');
       return;
     }
     if (formData.password.length < 6) {
@@ -173,14 +164,9 @@ export default function Signup() {
             <motion.div variants={fieldVariants}>
               <input
                 type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                placeholder="Student ID (7 digits)"
+                placeholder="Student ID (e.g., 2023-12345)"
                 value={formData.id}
-                onChange={(e) => {
-                  const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 7);
-                  setFormData({ ...formData, id: digitsOnly });
-                }}
+                onChange={(e) => setFormData({ ...formData, id: e.target.value })}
               />
             </motion.div>
             <motion.div variants={fieldVariants}>
@@ -210,28 +196,17 @@ export default function Signup() {
                 placeholder="Password (min 6 characters)"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                style={{ paddingRight: 46 }}
+                style={{ paddingRight: 100 }}
               />
-              <button
-                type="button"
-                className="pnc-password-toggle"
-                onClick={() => setShowPassword((s) => !s)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                title={showPassword ? 'Hide password' : 'Show password'}
+              <select
+                className="pnc-password-select"
+                value={showPassword ? 'visible' : 'hidden'}
+                onChange={(e) => setShowPassword(e.target.value === 'visible')}
+                aria-label="Toggle password visibility"
               >
-                {showPassword ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                    <circle cx="12" cy="12" r="3" />
-                    <line x1="3" y1="21" x2="21" y2="3" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
+                <option value="hidden">Show</option>
+                <option value="visible">Hide</option>
+              </select>
             </motion.div>
 
             <motion.div variants={fieldVariants}>
