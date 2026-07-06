@@ -24,21 +24,23 @@ const FONTS_IMPORT = `
     transition: border-color 0.15s ease;
   }
   .pnc-login input:focus { outline: none; border-color: ${T.forest}; }
-  .pnc-login button:focus-visible, .pnc-login a:focus-visible, .pnc-login input:focus-visible {
+  .pnc-login button:focus-visible, .pnc-login a:focus-visible, .pnc-login input:focus-visible, .pnc-login select:focus-visible {
     outline: 2px solid ${T.forest}; outline-offset: 2px;
   }
-  .pnc-password-toggle {
-    position: absolute; right: 6px; top: 0; bottom: 0; margin: auto 0;
-    width: 34px; height: 34px; padding: 0; line-height: 0;
-    box-sizing: border-box;
-    display: flex; align-items: center; justify-content: center;
-    background: transparent; color: ${T.inkSoft};
-    border: none; border-radius: 5px; cursor: pointer;
-    appearance: none; -webkit-appearance: none;
-    transition: background 0.15s ease, color 0.15s ease;
+  .pnc-login select {
+    height: 46px; padding: 0 12px; font-size: 13px; font-weight: 600;
+    border-radius: 6px; border: 1.5px solid ${T.hairline};
+    background: ${T.paper}; color: ${T.inkSoft}; font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: border-color 0.15s ease;
   }
-  .pnc-password-toggle:hover { background: ${T.hairline}66; color: ${T.forestDeep}; }
-  .pnc-password-toggle svg { width: 18px; height: 18px; display: block; flex-shrink: 0; }
+  .pnc-login select:focus { outline: none; border-color: ${T.forest}; }
+  .pnc-password-select {
+    position: absolute; right: 6px; top: 0; bottom: 0; margin: auto 0;
+    height: 32px !important; width: 88px;
+    padding: 0 10px !important; font-size: 12px !important; font-weight: 600;
+    box-sizing: border-box;
+  }
+  .pnc-password-select:hover { border-color: ${T.forest}; }
 `;
 
 async function hashPassword(password) {
@@ -145,28 +147,17 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                style={{ paddingRight: 46 }}
+                style={{ paddingRight: 100 }}
               />
-              <button
-                type="button"
-                className="pnc-password-toggle"
-                onClick={() => setShowPassword((s) => !s)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                title={showPassword ? 'Hide password' : 'Show password'}
+              <select
+                className="pnc-password-select"
+                value={showPassword ? 'visible' : 'hidden'}
+                onChange={(e) => setShowPassword(e.target.value === 'visible')}
+                aria-label="Toggle password visibility"
               >
-                {showPassword ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                    <circle cx="12" cy="12" r="3" />
-                    <line x1="3" y1="21" x2="21" y2="3" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
+                <option value="hidden">Show</option>
+                <option value="visible">Hide</option>
+              </select>
             </div>
 
             {error && (
