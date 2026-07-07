@@ -28,8 +28,8 @@ const FONTS_IMPORT = `
     outline: 2px solid ${T.forest}; outline-offset: 2px;
   }
   .pnc-password-toggle {
-    position: absolute; right: 5px; top: 0; bottom: 0; margin: auto 0;
-    width: 20px; height: 20px; padding: 0; line-height: 0;
+    position: absolute; right: 4px; top: 0; bottom: 0; margin: auto 0;
+    width: 26px; height: 26px; padding: 0; line-height: 0;
     box-sizing: border-box;
     display: flex; align-items: center; justify-content: center;
     background: transparent; color: ${T.inkSoft};
@@ -38,7 +38,7 @@ const FONTS_IMPORT = `
     transition: background 0.15s ease, color 0.15s ease;
   }
   .pnc-password-toggle:hover { background: ${T.hairline}66; color: ${T.forestDeep}; }
-  .pnc-password-toggle svg { width: 18px; height: 18px; display: block; flex-shrink: 0; }
+  .pnc-password-toggle svg { width: 14px; height: 14px; display: block; flex-shrink: 0; }
 `;
 
 async function hashPassword(password) {
@@ -145,7 +145,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                style={{ paddingRight: 46 }}
+                style={{ paddingRight: 36 }}
               />
               <button
                 type="button"
