@@ -50,6 +50,40 @@ const FONTS_IMPORT = `
   @media (prefers-reduced-motion: reduce) {
     .pnc-landing * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   }
+
+  /* ── Mobile breakpoints ──────────────────────────────────────────── */
+
+  /* Tablet / small laptop: hero starts to tighten before it fully stacks */
+  @media (max-width: 860px) {
+    .pnc-hero-grid { gap: 40px !important; }
+  }
+
+  @media (max-width: 720px) {
+    .pnc-hero-grid { grid-template-columns: 1fr !important; }
+    .pnc-hero-section { padding: 36px 20px 32px !important; }
+    .pnc-features-section { padding: 44px 20px !important; }
+    .pnc-steps-section { padding: 44px 20px !important; }
+    .pnc-contact-section { padding: 44px 20px 52px !important; }
+    .pnc-features-grid { grid-template-columns: 1fr !important; }
+    .pnc-nav-subtitle { font-size: 9px !important; }
+    .pnc-nav-brand-name { font-size: 13px !important; }
+    .pnc-cta-nav { padding: 8px 14px !important; font-size: 12.5px !important; }
+  }
+
+  @media (max-width: 480px) {
+    .pnc-nav-inner { padding: 0 16px !important; height: 58px !important; }
+    .pnc-nav-contact { display: none !important; }
+    .pnc-nav-login { padding: 7px 10px !important; }
+    .pnc-hero-eyebrow { font-size: 10px !important; margin-bottom: 14px !important; }
+    .pnc-hero-title { font-size: 1.6rem !important; margin-bottom: 16px !important; }
+    .pnc-hero-sub { font-size: 14.5px !important; margin-bottom: 26px !important; }
+    .pnc-hero-actions { flex-direction: column; align-items: stretch; }
+    .pnc-hero-actions a { justify-content: center; width: 100%; }
+    .pnc-manuscript-card { padding: 16px 16px !important; }
+    .pnc-section-title { font-size: 1.25rem !important; }
+    .pnc-footer-inner { flex-direction: column; align-items: flex-start !important; gap: 16px !important; }
+    .pnc-footer-links { width: 100%; justify-content: space-between !important; }
+  }
 `;
 
 /* Correction samples for the hero manuscript card — mirrors real output:
@@ -143,12 +177,13 @@ export default function Landing() {
     <div className="pnc-landing" style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       background: T.paper, fontFamily: "'Inter', system-ui, sans-serif", color: T.ink,
+      overflowX: 'hidden', width: '100%',
     }}>
       <style>{FONTS_IMPORT}</style>
 
       {/* ══ NAV ══════════════════════════════════════════════════════════ */}
       <header style={{ position: 'sticky', top: 0, zIndex: 100, background: T.paper, borderBottom: `1px solid ${T.hairline}` }}>
-        <div style={{
+        <div className="pnc-nav-inner" style={{
           maxWidth: 1080, margin: '0 auto', padding: '0 24px', height: 64,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
@@ -156,19 +191,26 @@ export default function Landing() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}
           >
             <div style={{
-              width: 34, height: 34, borderRadius: 4,
+              flexShrink: 0, width: 34, height: 34, borderRadius: 4,
               border: `1.5px solid ${T.ink}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: "'Source Serif 4', serif", fontSize: 17, fontWeight: 700, color: T.ink,
             }}>P</div>
-            <div>
-              <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 15, fontWeight: 700, color: T.ink, lineHeight: 1.1 }}>
+            <div style={{ minWidth: 0 }}>
+              <div className="pnc-nav-brand-name" style={{
+                fontFamily: "'Source Serif 4', serif", fontSize: 15, fontWeight: 700, color: T.ink, lineHeight: 1.1,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
                 Pamantasan ng Cabuyao
               </div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 500, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.3 }}>
+              <div className="pnc-nav-subtitle" style={{
+                fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 500, color: T.inkFaint,
+                textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.3,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
                 Taglish Spell Checker
               </div>
             </div>
@@ -178,20 +220,20 @@ export default function Landing() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1, duration: 0.4 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}
           >
-            <a href="#contact" className="pnc-nav-link" style={{ padding: '8px 14px', fontSize: 13, fontWeight: 500, color: T.inkSoft, textDecoration: 'none' }}>
+            <a href="#contact" className="pnc-nav-link pnc-nav-contact" style={{ padding: '8px 14px', fontSize: 13, fontWeight: 500, color: T.inkSoft, textDecoration: 'none', whiteSpace: 'nowrap' }}>
               Contact
             </a>
-            <Link to="/login" className="pnc-nav-link" style={{ padding: '8px 14px', fontSize: 13, fontWeight: 500, color: T.inkSoft, textDecoration: 'none' }}>
+            <Link to="/login" className="pnc-nav-link pnc-nav-login" style={{ padding: '8px 14px', fontSize: 13, fontWeight: 500, color: T.inkSoft, textDecoration: 'none', whiteSpace: 'nowrap' }}>
               Log in
             </Link>
             <Link
               to="/signup"
-              className="pnc-cta-primary"
+              className="pnc-cta-primary pnc-cta-nav"
               style={{
                 marginLeft: 8, padding: '9px 18px', borderRadius: 6, fontSize: 13, fontWeight: 700,
-                background: T.forestDeep, color: T.white, textDecoration: 'none',
+                background: T.forestDeep, color: T.white, textDecoration: 'none', whiteSpace: 'nowrap',
               }}
             >
               Create account
@@ -203,15 +245,15 @@ export default function Landing() {
       <main style={{ flex: 1 }}>
 
         {/* ══ HERO ════════════════════════════════════════════════════════ */}
-        <section style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 24px 40px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 0.95fr)', gap: 56, alignItems: 'center' }}>
+        <section className="pnc-hero-section" style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 24px 40px' }}>
+          <div className="pnc-hero-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 0.95fr)', gap: 56, alignItems: 'center' }}>
 
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div style={{
+              <div className="pnc-hero-eyebrow" style={{
                 fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 500,
                 color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.1em',
                 marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8,
@@ -220,18 +262,18 @@ export default function Landing() {
                 Student writing assistant
               </div>
 
-              <h1 style={{
+              <h1 className="pnc-hero-title" style={{
                 margin: '0 0 22px', fontFamily: "'Source Serif 4', serif",
-                fontSize: 'clamp(2rem, 3.4vw, 2.9rem)', fontWeight: 700, lineHeight: 1.18, color: T.ink,
+                fontSize: 'clamp(1.75rem, 6vw, 2.9rem)', fontWeight: 700, lineHeight: 1.18, color: T.ink,
               }}>
                 Every misspelled word — in English, Filipino, or both at once.
               </h1>
 
-              <p style={{ margin: '0 0 32px', maxWidth: 480, fontSize: 16, lineHeight: 1.7, color: T.inkSoft }}>
+              <p className="pnc-hero-sub" style={{ margin: '0 0 32px', maxWidth: 480, fontSize: 16, lineHeight: 1.7, color: T.inkSoft }}>
                 Paste a paragraph and two algorithms check it side by side, word by word — weighted Levenshtein distance and Jaro-Winkler similarity — so nothing slips through for being in the wrong language.
               </p>
 
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div className="pnc-hero-actions" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <Link to="/signup" className="pnc-cta-primary" style={{
                   display: 'inline-flex', alignItems: 'center', padding: '13px 26px', borderRadius: 6,
                   fontSize: 14, fontWeight: 700, background: T.forestDeep, color: T.white, textDecoration: 'none',
@@ -254,9 +296,11 @@ export default function Landing() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+              className="pnc-manuscript-card"
               style={{
                 background: T.white, border: `1px solid ${T.hairline}`, borderRadius: 8,
                 padding: '20px 22px', boxShadow: '0 1px 2px rgba(22,36,29,0.04)',
+                width: '100%', minWidth: 0,
               }}
             >
               <div style={{
@@ -273,7 +317,7 @@ export default function Landing() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {CORRECTIONS.map((c, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 14, color: T.inkSoft, lineHeight: 1.5 }}>
                       {c.context.split('__').map((part, idx, arr) => (
                         <span key={idx}>
@@ -284,7 +328,7 @@ export default function Landing() {
                         </span>
                       ))}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: 13 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, flexWrap: 'wrap' }}>
                       <span style={{
                         padding: '1px 6px', borderRadius: 3, fontSize: 10, fontWeight: 600,
                         background: T.forestTint, color: T.forestDeep, letterSpacing: '0.03em',
@@ -303,7 +347,7 @@ export default function Landing() {
         </section>
 
         {/* ══ FEATURES ════════════════════════════════════════════════════ */}
-        <section style={{ borderTop: `1px solid ${T.hairline}`, borderBottom: `1px solid ${T.hairline}`, background: T.paperDim, padding: '60px 24px' }}>
+        <section className="pnc-features-section" style={{ borderTop: `1px solid ${T.hairline}`, borderBottom: `1px solid ${T.hairline}`, background: T.paperDim, padding: '60px 24px' }}>
           <div style={{ maxWidth: 1080, margin: '0 auto' }}>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -312,7 +356,7 @@ export default function Landing() {
               transition={{ duration: 0.4 }}
               style={{ marginBottom: 40, maxWidth: 520 }}
             >
-              <h2 style={{ margin: '0 0 10px', fontFamily: "'Source Serif 4', serif", fontSize: '1.6rem', fontWeight: 700, color: T.ink }}>
+              <h2 className="pnc-section-title" style={{ margin: '0 0 10px', fontFamily: "'Source Serif 4', serif", fontSize: '1.6rem', fontWeight: 700, color: T.ink }}>
                 What the checker actually does
               </h2>
               <p style={{ margin: 0, color: T.inkSoft, fontSize: 14.5, lineHeight: 1.6 }}>
@@ -320,7 +364,7 @@ export default function Landing() {
               </p>
             </motion.div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0 40px' }}>
+            <div className="pnc-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0 40px' }}>
               {FEATURES.map((f, i) => (
                 <motion.div
                   key={i}
@@ -339,7 +383,7 @@ export default function Landing() {
                   }}>
                     {f.mark}
                   </div>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14.5, color: T.ink, marginBottom: 5 }}>{f.title}</div>
                     <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.65 }}>{f.desc}</div>
                   </div>
@@ -350,7 +394,7 @@ export default function Landing() {
         </section>
 
         {/* ══ HOW IT WORKS ════════════════════════════════════════════════ */}
-        <section style={{ padding: '60px 24px' }}>
+        <section className="pnc-steps-section" style={{ padding: '60px 24px' }}>
           <div style={{ maxWidth: 780, margin: '0 auto' }}>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -359,7 +403,7 @@ export default function Landing() {
               transition={{ duration: 0.4 }}
               style={{ marginBottom: 36 }}
             >
-              <h2 style={{ margin: '0 0 10px', fontFamily: "'Source Serif 4', serif", fontSize: '1.4rem', fontWeight: 700, color: T.ink }}>
+              <h2 className="pnc-section-title" style={{ margin: '0 0 10px', fontFamily: "'Source Serif 4', serif", fontSize: '1.4rem', fontWeight: 700, color: T.ink }}>
                 How it works
               </h2>
               <p style={{ margin: 0, color: T.inkSoft, fontSize: 14 }}>Three steps, start to finish.</p>
@@ -384,7 +428,7 @@ export default function Landing() {
                   }}>
                     {s.num}
                   </div>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 15, color: T.ink, marginBottom: 4 }}>{s.title}</div>
                     <div style={{ fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6 }}>{s.desc}</div>
                   </div>
@@ -410,7 +454,7 @@ export default function Landing() {
         </section>
 
         {/* ══ CONTACT ═════════════════════════════════════════════════════ */}
-        <section id="contact" style={{ borderTop: `1px solid ${T.hairline}`, background: T.paperDim, padding: '60px 24px 68px' }}>
+        <section id="contact" className="pnc-contact-section" style={{ borderTop: `1px solid ${T.hairline}`, background: T.paperDim, padding: '60px 24px 68px' }}>
           <div style={{ maxWidth: 460, margin: '0 auto' }}>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -419,7 +463,7 @@ export default function Landing() {
               transition={{ duration: 0.4 }}
               style={{ marginBottom: 26 }}
             >
-              <h2 style={{ margin: '0 0 8px', fontFamily: "'Source Serif 4', serif", fontSize: '1.4rem', fontWeight: 700, color: T.ink }}>
+              <h2 className="pnc-section-title" style={{ margin: '0 0 8px', fontFamily: "'Source Serif 4', serif", fontSize: '1.4rem', fontWeight: 700, color: T.ink }}>
                 Contact us
               </h2>
               <p style={{ margin: 0, fontSize: 13.5, color: T.inkSoft, lineHeight: 1.6 }}>
@@ -440,7 +484,7 @@ export default function Landing() {
                     placeholder="Your full name"
                     maxLength={255}
                     className="pnc-field"
-                    style={{ width: '100%', padding: '10px 12px', fontSize: 14, borderRadius: 5, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink }}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 16, borderRadius: 5, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink }}
                   />
                 </div>
                 <div>
@@ -453,7 +497,7 @@ export default function Landing() {
                     onChange={e => setContactEmail(e.target.value)}
                     placeholder="you@email.com"
                     className="pnc-field"
-                    style={{ width: '100%', padding: '10px 12px', fontSize: 14, borderRadius: 5, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink }}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 16, borderRadius: 5, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink }}
                   />
                 </div>
                 <div>
@@ -467,7 +511,7 @@ export default function Landing() {
                     maxLength={5000}
                     placeholder="What would you like to tell us?"
                     className="pnc-field"
-                    style={{ width: '100%', padding: '10px 12px', fontSize: 14, borderRadius: 5, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink, minHeight: 120, fontFamily: 'inherit', resize: 'vertical' }}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 16, borderRadius: 5, border: `1.5px solid ${T.hairline}`, background: T.paper, color: T.ink, minHeight: 120, fontFamily: 'inherit', resize: 'vertical' }}
                   />
                 </div>
 
@@ -511,7 +555,7 @@ export default function Landing() {
 
       {/* ══ FOOTER ══════════════════════════════════════════════════════ */}
       <footer style={{ background: T.forestDeep, padding: '30px 24px' }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div className="pnc-footer-inner" style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 26, height: 26, borderRadius: 3, border: '1.5px solid rgba(255,255,255,0.5)',
@@ -522,7 +566,7 @@ export default function Landing() {
               PNC Taglish Spell Checker
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <div className="pnc-footer-links" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <span style={{ fontSize: 12, color: 'rgba(255,253,248,0.45)' }}>
               Pamantasan ng Cabuyao
             </span>
