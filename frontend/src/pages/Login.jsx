@@ -28,8 +28,8 @@ const FONTS_IMPORT = `
     outline: 2px solid ${T.forest}; outline-offset: 2px;
   }
   .pnc-password-toggle {
-    position: absolute; right: 6px; top: 0; bottom: 0; margin: auto 0;
-    width: 34px; height: 34px; padding: 0; line-height: 0;
+    position: absolute; right: 5px; top: 0; bottom: 0; margin: auto 0;
+    width: 20px; height: 20px; padding: 0; line-height: 0;
     box-sizing: border-box;
     display: flex; align-items: center; justify-content: center;
     background: transparent; color: ${T.inkSoft};
