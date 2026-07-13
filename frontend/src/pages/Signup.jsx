@@ -65,8 +65,7 @@ export default function Signup() {
     middleName: '',
     id: '',
     email: '',
-    yearLevel: '',
-    section: '',
+    yearSection: '',
     password: '',
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
@@ -82,12 +81,16 @@ export default function Signup() {
 
   const handleSignUp = async () => {
     setFormError(null);
-    if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.id || !formData.email || !formData.yearLevel || !formData.section || !formData.password) {
-      setFormError('Please fill in all required fields (first name, last name, student ID, email, year, section, password).');
+    if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.id || !formData.email || !formData.yearSection?.trim() || !formData.password) {
+      setFormError('Please fill in all required fields (first name, last name, student ID, email, year & section, password).');
       return;
     }
     if (formData.id.length !== 7) {
       setFormError('Student ID must be exactly 7 digits.');
+      return;
+    }
+    if (!/^[1-4]-\d{1,2}$/.test(formData.yearSection.trim())) {
+      setFormError('Year & section must be in the format Year-Section, e.g. 3-1.');
       return;
     }
     if (formData.password.length < 6) {
@@ -102,7 +105,7 @@ export default function Signup() {
     try {
       const passwordHash = await hashPassword(formData.password);
       const fullName = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(' ');
-      const sectionLabel = `BSCS ${formData.yearLevel}-${formData.section}`;
+      const sectionLabel = `BSCS ${formData.yearSection.trim()}`;
       const studentData = {
         name: fullName,
         firstName: formData.firstName.trim(),
@@ -194,29 +197,18 @@ export default function Signup() {
               />
             </motion.div>
 
-            <motion.div variants={fieldVariants} style={{ display: 'flex', gap: 10 }}>
+            <motion.div variants={fieldVariants}>
               <input
                 type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                placeholder="Year (e.g. 3)"
-                maxLength={1}
-                value={formData.yearLevel}
+                placeholder="Year & section (e.g. 3-1)"
+                maxLength={4}
+                value={formData.yearSection}
                 onChange={(e) => {
-                  const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 1);
-                  setFormData({ ...formData, yearLevel: digitsOnly });
-                }}
-              />
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                placeholder="Section (e.g. 1)"
-                maxLength={2}
-                value={formData.section}
-                onChange={(e) => {
-                  const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 2);
-                  setFormData({ ...formData, section: digitsOnly });
+                  // allow only digits and a single hyphen, e.g. "3-1"
+                  let v = e.target.value.replace(/[^0-9-]/g, '');
+                  const parts = v.split('-');
+                  if (parts.length > 2) v = parts[0] + '-' + parts.slice(1).join('');
+                  setFormData({ ...formData, yearSection: v.slice(0, 4) });
                 }}
               />
             </motion.div>
