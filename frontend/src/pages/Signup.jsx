@@ -17,6 +17,9 @@ const T = {
   white:      '#fffdf8',
 };
 
+const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+const SECTIONS = ['CS-A', 'CS-B', 'CS-C', 'CS-D', 'CS-E'];
+
 const FONTS_IMPORT = `
   @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
   .pnc-signup input, .pnc-signup select {
@@ -25,11 +28,31 @@ const FONTS_IMPORT = `
     background: ${T.paper}; color: ${T.ink}; font-family: 'Inter', sans-serif;
     transition: border-color 0.15s ease;
   }
+  .pnc-signup select {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234b584f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 36px;
+    cursor: pointer;
+  }
   .pnc-signup input:focus, .pnc-signup select:focus {
     outline: none; border-color: ${T.forest};
   }
-  .pnc-signup button:focus-visible, .pnc-signup a:focus-visible, .pnc-signup input:focus-visible {
+  .pnc-signup button:focus-visible, .pnc-signup a:focus-visible, .pnc-signup input:focus-visible, .pnc-signup select:focus-visible {
     outline: 2px solid ${T.forest}; outline-offset: 2px;
+  }
+  .pnc-field-row {
+    display: flex; gap: 12px;
+  }
+  .pnc-field-row > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .pnc-field-label {
+    display: block; font-size: 12px; font-weight: 600; color: ${T.inkSoft};
+    margin-bottom: 6px; font-family: 'Inter', sans-serif;
   }
   .pnc-password-toggle {
     position: absolute; right: 6px; top: 0; bottom: 0; margin: auto 0;
@@ -65,7 +88,8 @@ export default function Signup() {
     middleName: '',
     id: '',
     email: '',
-    yearSection: '',
+    yearLevel: '',
+    section: '',
     password: '',
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
@@ -81,16 +105,20 @@ export default function Signup() {
 
   const handleSignUp = async () => {
     setFormError(null);
-    if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.id || !formData.email || !formData.yearSection?.trim() || !formData.password) {
-      setFormError('Please fill in all required fields (first name, last name, student ID, email, year & section, password).');
+    if (
+      !formData.firstName?.trim() ||
+      !formData.lastName?.trim() ||
+      !formData.id ||
+      !formData.email ||
+      !formData.yearLevel ||
+      !formData.section ||
+      !formData.password
+    ) {
+      setFormError('Please fill in all required fields (first name, last name, student ID, email, year level, section, password).');
       return;
     }
     if (formData.id.length !== 7) {
       setFormError('Student ID must be exactly 7 digits.');
-      return;
-    }
-    if (!/^[1-4]-\d{1,2}$/.test(formData.yearSection.trim())) {
-      setFormError('Year & section must be in the format Year-Section, e.g. 3-1.');
       return;
     }
     if (formData.password.length < 6) {
@@ -105,7 +133,7 @@ export default function Signup() {
     try {
       const passwordHash = await hashPassword(formData.password);
       const fullName = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(' ');
-      const sectionLabel = `BSCS ${formData.yearSection.trim()}`;
+      const sectionLabel = `BSCS ${formData.yearLevel} - ${formData.section}`;
       const studentData = {
         name: fullName,
         firstName: formData.firstName.trim(),
@@ -113,6 +141,7 @@ export default function Signup() {
         middleName: formData.middleName.trim(),
         id: formData.id,
         email: formData.email.trim(),
+        yearLevel: formData.yearLevel,
         section: sectionLabel,
         totalChecks: 0,
         passwordHash,
@@ -197,20 +226,33 @@ export default function Signup() {
               />
             </motion.div>
 
-            <motion.div variants={fieldVariants}>
-              <input
-                type="text"
-                placeholder="Year & section (e.g. 3-1)"
-                maxLength={4}
-                value={formData.yearSection}
-                onChange={(e) => {
-                  // allow only digits and a single hyphen, e.g. "3-1"
-                  let v = e.target.value.replace(/[^0-9-]/g, '');
-                  const parts = v.split('-');
-                  if (parts.length > 2) v = parts[0] + '-' + parts.slice(1).join('');
-                  setFormData({ ...formData, yearSection: v.slice(0, 4) });
-                }}
-              />
+            <motion.div variants={fieldVariants} className="pnc-field-row">
+              <div>
+                <label className="pnc-field-label" htmlFor="yearLevel">Year Level</label>
+                <select
+                  id="yearLevel"
+                  value={formData.yearLevel}
+                  onChange={(e) => setFormData({ ...formData, yearLevel: e.target.value })}
+                >
+                  <option value="" disabled>Select year</option>
+                  {YEAR_LEVELS.map((yl) => (
+                    <option key={yl} value={yl}>{yl}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="pnc-field-label" htmlFor="section">Section</label>
+                <select
+                  id="section"
+                  value={formData.section}
+                  onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                >
+                  <option value="" disabled>Select section</option>
+                  {SECTIONS.map((sec) => (
+                    <option key={sec} value={sec}>{sec}</option>
+                  ))}
+                </select>
+              </div>
             </motion.div>
 
             <motion.div variants={fieldVariants} style={{ position: 'relative' }}>
