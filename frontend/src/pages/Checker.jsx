@@ -58,6 +58,11 @@ const FONTS_IMPORT = `
   .pnc-checker .word-status-inline.status-misspelled,
   .pnc-checker .word-status-inline.status-incorrect   { background: ${T.redTint}; border-bottom: 2px solid ${T.red}; }
 
+  /* Punctuation attached to a word (leading/trailing) is rendered plain —
+     no status color, no underline — so only the letters of the word carry
+     the correctness signal. */
+  .pnc-checker .word-punct-inline { color: ${T.inkSoft}; background: transparent; border-bottom: none; }
+
   @media (prefers-reduced-motion: reduce) {
     .pnc-checker * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   }
@@ -86,6 +91,20 @@ function normalizeCandidateWord(candidate) {
     }
   }
   return '';
+}
+
+/* Splits a whitespace-delimited chunk into leading punctuation / a letter-
+   or-number-bearing core / trailing punctuation, e.g. `"(hello)," ->
+   { lead: "(", core: "hello", trail: ')","' }` — wait, no: trailing greedily
+   grabs every non-letter run at the end, so `"(hello)," -> lead:"(",
+   core:"hello", trail:")," `. Internal punctuation (apostrophes in
+   "don't", hyphens in "e-mail") is left untouched since it isn't at the
+   start or end of the chunk. Pure-punctuation chunks (e.g. "--", "...")
+   come back with an empty core. */
+function splitPunctuation(raw) {
+  const m = raw.match(/^([\p{P}\p{S}]*)(.*?)([\p{P}\p{S}]*)$/u);
+  if (!m) return { lead: '', core: raw, trail: '' };
+  return { lead: m[1], core: m[2], trail: m[3] };
 }
 
 function getWordChunkBounds(fullText, targetWordIndex) {
@@ -190,7 +209,18 @@ export default function Checker() {
         const idx    = wordIndex++;
         const res    = results[idx];
         const status = highlightStatus(res || {}, idx, grammarIssues);
-        return <span key={i} className={`word-status-inline status-${status}`}>{chunk}</span>;
+        const { lead, core, trail } = splitPunctuation(chunk);
+
+        // Pure-punctuation token (e.g. "--", "...") — nothing to grade.
+        if (!core) return <span key={i} className="word-punct-inline">{chunk}</span>;
+
+        return (
+          <span key={i}>
+            {lead  && <span className="word-punct-inline">{lead}</span>}
+            <span className={`word-status-inline status-${status}`}>{core}</span>
+            {trail && <span className="word-punct-inline">{trail}</span>}
+          </span>
+        );
       })
     : [text];
 
@@ -239,6 +269,14 @@ export default function Checker() {
       if (cursor >= currentPos && cursor < currentPos + w.length) {
         const wordResult = results[wordIdx];
         if (wordResult) {
+          // If the click landed inside the leading/trailing punctuation of
+          // this chunk rather than on its letters, there's nothing to
+          // correct — don't pop a suggestion box over a comma.
+          const { lead, core } = splitPunctuation(w);
+          const offsetInChunk  = cursor - currentPos;
+          const clickedPunctOnly = !core || offsetInChunk < lead.length || offsetInChunk >= lead.length + core.length;
+          if (clickedPunctOnly) { setActiveSuggestion(null); setSelectedWordIndex(null); return; }
+
           setSelectedWordIndex(wordIdx);
           const g         = grammarIssueForIndex(grammarIssues, wordIdx);
           const spellSugs = (wordResult.suggestions || [])
@@ -285,8 +323,15 @@ export default function Checker() {
       bounds = getWordChunkBounds(text, wordIdx);
     }
     if (!bounds) return;
-    const cased   = adjustCaseToMatchOriginal(replacementText, originalRaw ?? bounds.raw);
-    const newText = text.slice(0, bounds.start) + cased + text.slice(bounds.end);
+
+    // Replace only the letter-bearing core of the chunk so any leading/
+    // trailing punctuation the user typed (e.g. the comma in "hello,") is
+    // preserved instead of being clobbered by the replacement word.
+    const { lead, core, trail } = splitPunctuation(bounds.raw);
+    const cased = adjustCaseToMatchOriginal(replacementText, originalRaw ?? core ?? bounds.raw);
+    const newCore = core ? cased : cased; // pure-punctuation chunks just get replaced outright
+    const replacedChunk = core ? `${lead}${newCore}${trail}` : cased;
+    const newText = text.slice(0, bounds.start) + replacedChunk + text.slice(bounds.end);
     setText(newText);
     setActiveSuggestion(null);
     setSelectedWordIndex(null);
