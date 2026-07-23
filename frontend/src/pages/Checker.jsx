@@ -107,6 +107,18 @@ function splitPunctuation(raw) {
   return { lead: m[1], core: m[2], trail: m[3] };
 }
 
+/* Breaks a chunk into an ordered list of runs, each either a punctuation/
+   symbol run or a "real content" run — so punctuation is caught wherever
+   it falls, not just at the two edges. "m,y" -> [{m,false},{,true},{y,false}]
+   instead of being treated as a single 3-character token where the comma
+   rides along inside the colored highlight. Concatenating every segment's
+   text reproduces the original chunk exactly. */
+function splitIntoSegments(raw) {
+  const matches = raw.match(/[\p{P}\p{S}]+|[^\p{P}\p{S}]+/gu);
+  if (!matches) return [{ text: raw, isPunct: false }];
+  return matches.map(seg => ({ text: seg, isPunct: /[\p{P}\p{S}]/u.test(seg[0]) }));
+}
+
 function getWordChunkBounds(fullText, targetWordIndex) {
   const parts = fullText.split(/(\s+)/u);
   let wi = 0, pos = 0;
@@ -209,16 +221,19 @@ export default function Checker() {
         const idx    = wordIndex++;
         const res    = results[idx];
         const status = highlightStatus(res || {}, idx, grammarIssues);
-        const { lead, core, trail } = splitPunctuation(chunk);
+        const segments = splitIntoSegments(chunk);
 
         // Pure-punctuation token (e.g. "--", "...") — nothing to grade.
-        if (!core) return <span key={i} className="word-punct-inline">{chunk}</span>;
+        if (!segments.some(seg => !seg.isPunct)) {
+          return <span key={i} className="word-punct-inline">{chunk}</span>;
+        }
 
         return (
           <span key={i}>
-            {lead  && <span className="word-punct-inline">{lead}</span>}
-            <span className={`word-status-inline status-${status}`}>{core}</span>
-            {trail && <span className="word-punct-inline">{trail}</span>}
+            {segments.map((seg, j) => seg.isPunct
+              ? <span key={j} className="word-punct-inline">{seg.text}</span>
+              : <span key={j} className={`word-status-inline status-${status}`}>{seg.text}</span>
+            )}
           </span>
         );
       })
@@ -272,9 +287,14 @@ export default function Checker() {
           // If the click landed inside the leading/trailing punctuation of
           // this chunk rather than on its letters, there's nothing to
           // correct — don't pop a suggestion box over a comma.
-          const { lead, core } = splitPunctuation(w);
-          const offsetInChunk  = cursor - currentPos;
-          const clickedPunctOnly = !core || offsetInChunk < lead.length || offsetInChunk >= lead.length + core.length;
+          const offsetInChunk = cursor - currentPos;
+          const segments      = splitIntoSegments(w);
+          let segStart = 0, clickedPunctOnly = true;
+          for (const seg of segments) {
+            const segEnd = segStart + seg.text.length;
+            if (offsetInChunk >= segStart && offsetInChunk < segEnd) { clickedPunctOnly = seg.isPunct; break; }
+            segStart = segEnd;
+          }
           if (clickedPunctOnly) { setActiveSuggestion(null); setSelectedWordIndex(null); return; }
 
           setSelectedWordIndex(wordIdx);
