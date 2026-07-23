@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
@@ -57,6 +57,18 @@ export default function Login() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  /* Guard: if a session already exists (e.g. the user reached this route
+     via a stale back/swipe-back entry on mobile), don't force them through
+     the sign-in form again — just continue into the app. `replace: true`
+     keeps this hop out of the history stack too. */
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const pncUser = localStorage.getItem('pnc_user');
+    if (isLoggedIn === 'true' && pncUser) {
+      navigate('/checker', { replace: true });
+    }
+  }, [navigate]);
+
   const handleLogin = async () => {
     setError(null);
 
@@ -97,7 +109,12 @@ export default function Login() {
       }
       localStorage.setItem('isLoggedIn', 'true');
       localStorage.setItem('pnc_user', studentId);
-      navigate('/checker');
+      /* `replace: true` swaps this /login history entry out for /checker,
+         so the stack becomes Home → Checker instead of Home → Login →
+         Checker. That means the mobile back button / swipe-back gesture
+         goes straight to Home instead of bouncing back to the sign-in
+         form — while the session itself (localStorage) is untouched. */
+      navigate('/checker', { replace: true });
     } catch (loginError) {
       setError('Login failed unexpectedly. Please try again.');
     } finally {
