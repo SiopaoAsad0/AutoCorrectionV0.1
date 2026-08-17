@@ -34,11 +34,21 @@ class AdaptedLevenshteinService
 
     /**
      * Minimum weighted edit distance (two-row DP, O(nm) time, O(n) space).
+     *
+     * Splits both strings into char arrays once up front (mb_str_split)
+     * instead of calling mb_substr() inside the nested loops. mb_substr()
+     * re-scans a multi-byte string from its start on every call, so doing
+     * it per-cell turned this into effectively O(n^2 * m) rather than
+     * O(n * m) — with getCandidates() returning up to ~200 candidates per
+     * word, that repeated re-scanning was the dominant cost behind the
+     * reported per-request latency.
      */
     public function distance(string $a, string $b): float
     {
-        $lenA = mb_strlen($a);
-        $lenB = mb_strlen($b);
+        $charsA = mb_str_split($a);
+        $charsB = mb_str_split($b);
+        $lenA = count($charsA);
+        $lenB = count($charsB);
 
         if ($lenA === 0) {
             return $lenB * $this->insertCost;
@@ -54,9 +64,9 @@ class AdaptedLevenshteinService
 
         for ($i = 1; $i <= $lenA; $i++) {
             $curr = [$i * $this->deleteCost];
-            $charA = mb_substr($a, $i - 1, 1);
+            $charA = $charsA[$i - 1];
             for ($j = 1; $j <= $lenB; $j++) {
-                $charB = mb_substr($b, $j - 1, 1);
+                $charB = $charsB[$j - 1];
                 $subCost = $charA === $charB ? 0.0 : $this->substitutionCost($charA, $charB);
                 $curr[$j] = min(
                     $prev[$j] + $this->deleteCost,
@@ -77,8 +87,10 @@ class AdaptedLevenshteinService
      */
     public function editBreakdown(string $a, string $b): array
     {
-        $lenA = mb_strlen($a);
-        $lenB = mb_strlen($b);
+        $charsA = mb_str_split($a);
+        $charsB = mb_str_split($b);
+        $lenA = count($charsA);
+        $lenB = count($charsB);
 
         if ($lenA === 0 && $lenB === 0) {
             return ['substitutions' => 0, 'insertions' => 0, 'deletions' => 0];
@@ -99,9 +111,9 @@ class AdaptedLevenshteinService
         }
 
         for ($i = 1; $i <= $lenA; $i++) {
-            $charA = mb_substr($a, $i - 1, 1);
+            $charA = $charsA[$i - 1];
             for ($j = 1; $j <= $lenB; $j++) {
-                $charB = mb_substr($b, $j - 1, 1);
+                $charB = $charsB[$j - 1];
                 $subCost = $charA === $charB ? 0.0 : $this->substitutionCost($charA, $charB);
                 $dp[$i][$j] = min(
                     $dp[$i - 1][$j] + $this->deleteCost,
@@ -131,8 +143,8 @@ class AdaptedLevenshteinService
                 continue;
             }
 
-            $charA = mb_substr($a, $i - 1, 1);
-            $charB = mb_substr($b, $j - 1, 1);
+            $charA = $charsA[$i - 1];
+            $charB = $charsB[$j - 1];
             $subCost = $charA === $charB ? 0.0 : $this->substitutionCost($charA, $charB);
 
             $costDelete = $dp[$i - 1][$j] + $this->deleteCost;
