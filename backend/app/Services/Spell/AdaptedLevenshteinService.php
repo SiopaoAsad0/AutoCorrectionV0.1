@@ -21,10 +21,15 @@ class AdaptedLevenshteinService
     public function __construct()
     {
         $costs = config('spelling.edit_costs', []);
+        // Forced to standard, uniform Levenshtein costs (insert/delete/substitute
+        // all = 1.0) and an empty substitution-weight table. Per-pair weighted
+        // costs from typo_patterns are intentionally NOT loaded here, so this
+        // now computes plain/standard Levenshtein edit distance rather than an
+        // adapted or phonetically-weighted variant.
         $this->insertCost = (float) ($costs['insert'] ?? 1.0);
         $this->deleteCost = (float) ($costs['delete'] ?? 1.0);
         $this->defaultSubstituteCost = (float) ($costs['substitute'] ?? 1.0);
-        $this->substitutionWeights = TypoPattern::getSubstitutionWeights();
+        $this->substitutionWeights = [];
     }
 
     /**
