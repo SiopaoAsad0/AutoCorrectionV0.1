@@ -13,7 +13,7 @@ class SentenceAnalyticsService
     {
         $total = count($wordResults);
         $posCounts = [];
-        $statusCounts = ['correct' => 0, 'misspelled' => 0, 'suggested' => 0];
+        $statusCounts = ['correct' => 0, 'unknown' => 0, 'suggested' => 0];
         $distances = [];
 
         foreach ($wordResults as $w) {
@@ -31,10 +31,10 @@ class SentenceAnalyticsService
         }
 
         $correctCount = $statusCounts['correct'] ?? 0;
-        $misspelledCount = $statusCounts['misspelled'] ?? 0;
+        $unknownCount = $statusCounts['unknown'] ?? 0;
         $suggestedCount = $statusCounts['suggested'] ?? 0;
         $correctionRate = $total > 0 ? round($correctCount / $total, 4) : 0;
-        $incorrectCount = $misspelledCount + $suggestedCount;
+        $incorrectCount = $unknownCount + $suggestedCount;
         $wordErrorRate = $total > 0 ? round($incorrectCount / $total, 4) : 0;
 
         return [
@@ -54,12 +54,12 @@ class SentenceAnalyticsService
         if ($s === 'correct') {
             return 'correct';
         }
-        if (in_array($s, ['incorrect', 'misspelled'], true)) {
-            return 'misspelled';
+        if (in_array($s, ['incorrect', 'misspelled', 'unknown'], true)) {
+            return 'unknown';
         }
         if ($s === 'suggested' || str_contains($s, 'suggest')) {
             return 'suggested';
         }
-        return 'misspelled';
+        return 'unknown';
     }
 }
