@@ -51,6 +51,19 @@ class SpellCorrectionService
             $raw = $token['raw'];
             $normalized = $token['normalized'];
 
+            if ($this->isUnrecognizableInput($normalized)) {
+                $wordResults[] = [
+                    'word' => $raw,
+                    'normalized' => $normalized,
+                    'status' => 'unknown',
+                    'pos' => 'Unknown',
+                    'suggestions' => [],
+                    'distance' => null,
+                    'language' => null,
+                ];
+                continue;
+            }
+
             if ($span !== null && ! ($span['is_head'] ?? false)) {
                 $wordResults[] = [
                     'word' => $raw,
@@ -369,7 +382,7 @@ class SpellCorrectionService
             $wordResults[] = [
                 'word' => $raw,
                 'normalized' => $normalized,
-                'status' => count($suggestions) > 0 ? 'suggested' : 'misspelled',
+                'status' => count($suggestions) > 0 ? 'suggested' : 'unknown',
                 'pos' => $this->posTagging->tag($normalized, null),
                 'suggestions' => $suggestions,
                 'distance' => $minDistance,
@@ -378,9 +391,12 @@ class SpellCorrectionService
             ];
         }
 
-        $detectedLanguage = $this->languageDetection->detect(
-            array_map(fn ($r) => ['language' => $r['language']], $wordResults)
-        );
+        // Use the sentence-wide hint computed up front (scans every token's
+        // dictionary entry regardless of correctness) instead of only the
+        // sparse per-word 'language' field, which is null for most
+        // suggested/unknown words and previously caused detection to
+        // default to English on any sentence with typos.
+        $detectedLanguage = $sentenceLanguageHint;
         $analytics = $this->analytics->compute($wordResults, $detectedLanguage);
         $correctedText = $this->buildCorrectedText($wordResults, $maxOutputWords);
 
@@ -497,6 +513,37 @@ class SpellCorrectionService
     {
         $lower = mb_strtolower($word);
         return preg_replace('/[^\p{L}\p{N}\'-]/u', '', $lower) ?? '';
+    }
+
+    /**
+     * Inputs that cannot be reliably interpreted as standard words
+     * (pure numbers, symbol-only tokens, digit-dominant netspeak like
+     * "d2", "b4"). These are classified 'unknown' with no suggestions
+     * generated. Apostrophes/hyphens are NOT penalized here — contractions
+     * ("can't") and Taglish morphology ("mag-aral") stay eligible for
+     * normal correction, since normalizeWord() already preserves those
+     * characters and this check only rejects digit-dominant or
+     * letterless tokens.
+     */
+    private function isUnrecognizableInput(string $normalized): bool
+    {
+        if ($normalized === '') {
+            return true;
+        }
+        if (preg_match('/^\p{N}+$/u', $normalized)) {
+            return true;
+        }
+        if (! preg_match('/\p{L}/u', $normalized)) {
+            return true;
+        }
+
+        $letters = preg_replace('/[^\p{L}]/u', '', $normalized) ?? '';
+        $digits = preg_replace('/[^\p{N}]/u', '', $normalized) ?? '';
+        if ($digits !== '' && mb_strlen($digits) >= mb_strlen($letters)) {
+            return true;
+        }
+
+        return false;
     }
 
     private function isCandidateAcceptable(string $source, string $candidate, int $frequency, int $minFrequency = 1): bool
