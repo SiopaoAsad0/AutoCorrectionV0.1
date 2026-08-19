@@ -20,6 +20,19 @@ Route::post('/compare', [SpellController::class, 'compare']);
 Route::post('/contact', [ContactController::class, 'store']);
 Route::get('/contact/messages', [ContactController::class, 'index']);
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
+
+Route::get('/debug/dictionary-check', function (Request $request) {
+    $word = $request->query('word', 'spelling');
+    $rows = \App\Models\Dictionary::where('word', $word)->get();
+    $total = \App\Models\Dictionary::count();
+    return response()->json([
+        'word_queried' => $word,
+        'found' => $rows->count(),
+        'rows' => $rows,
+        'total_dictionary_rows' => $total,
+    ]);
+});
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
