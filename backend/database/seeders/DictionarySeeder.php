@@ -177,14 +177,23 @@ class DictionarySeeder extends Seeder
         }
     }
 
-private function frontendPublicPath(): ?string
-{
-    $bundled = base_path('database/seeders/data/lexicons');
-    if (is_dir($bundled)) {
-        return $bundled;
-    }
+    /**
+     * Word lists are bundled inside backend/database/seeders/data/lexicons so
+     * they ship with the Docker build on Render (whose Root Directory is
+     * "backend" — a sibling "frontend/public" folder does not exist inside
+     * the deployed container). The old sibling-folder path only worked for
+     * local dev, where both folders happen to sit next to each other on
+     * disk; it silently returned null on Render, which meant the bulk
+     * English/Tagalog/Taglish lexicons and typo corpora never seeded there.
+     */
+    private function frontendPublicPath(): ?string
+    {
+        $bundled = base_path('database/seeders/data/lexicons');
+        if (is_dir($bundled)) {
+            return $bundled;
+        }
 
-    $candidates = [
+        $candidates = [
             base_path('../frontend/public'),
             dirname(base_path(), 2).DIRECTORY_SEPARATOR.'frontend'.DIRECTORY_SEPARATOR.'public',
         ];
