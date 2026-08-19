@@ -177,9 +177,14 @@ class DictionarySeeder extends Seeder
         }
     }
 
-    private function frontendPublicPath(): ?string
-    {
-        $candidates = [
+private function frontendPublicPath(): ?string
+{
+    $bundled = base_path('database/seeders/data/lexicons');
+    if (is_dir($bundled)) {
+        return $bundled;
+    }
+
+    $candidates = [
             base_path('../frontend/public'),
             dirname(base_path(), 2).DIRECTORY_SEPARATOR.'frontend'.DIRECTORY_SEPARATOR.'public',
         ];
