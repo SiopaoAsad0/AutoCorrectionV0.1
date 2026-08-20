@@ -55,6 +55,7 @@ const FONTS_IMPORT = `
   .pnc-checker .word-status-inline.status-correct    { background: transparent; border-bottom: 2px solid ${T.forest}; }
   .pnc-checker .word-status-inline.status-suggested  { background: ${T.goldTint}; border-bottom: 2px solid ${T.gold}; }
   .pnc-checker .word-status-inline.status-grammar     { background: ${T.plumTint}; border-bottom: 2px solid ${T.plum}; }
+  .pnc-checker .word-status-inline.status-unknown,
   .pnc-checker .word-status-inline.status-misspelled,
   .pnc-checker .word-status-inline.status-incorrect   { background: ${T.redTint}; border-bottom: 2px solid ${T.red}; }
 
@@ -141,7 +142,7 @@ function grammarIssueForIndex(grammarIssues, idx) {
 function highlightStatus(res, idx, grammarIssues) {
   const g = grammarIssueForIndex(grammarIssues, idx);
   if (g && (res.status === 'correct' || res.status === 'suggested')) return 'grammar';
-  return res.status || 'misspelled';
+  return res.status || 'unknown';
 }
 
 function statusColor(status) {
@@ -159,12 +160,12 @@ function statusTint(status) {
 }
 
 function statusLabel(status) {
-  if (!status) return 'Incorrect';
+  if (!status) return 'Unknown';
   const s = status.toLowerCase();
   if (s === 'correct')   return 'Correct';
   if (s === 'suggested') return 'Suggested';
   if (s === 'grammar')   return 'Grammar';
-  return 'Incorrect';
+  return 'Unknown';
 }
 
 function StatPill({ label, value, color }) {
@@ -482,7 +483,7 @@ export default function Checker() {
                   { dot: T.forest, label: 'Correct' },
                   { dot: T.gold,   label: 'Suggested' },
                   { dot: T.plum,   label: 'Grammar' },
-                  { dot: T.red,    label: 'Error' },
+                  { dot: T.red,    label: 'Unknown' },
                 ].map((l, i) => (
                   <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.inkSoft }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: l.dot, display: 'inline-block' }} />
@@ -635,7 +636,7 @@ export default function Checker() {
                     <StatPill label="Total"     value={analytics.total_words} />
                     <StatPill label="Correct"   value={sc.correct    ?? 0} color={T.forestDeep} />
                     <StatPill label="Suggested" value={sc.suggested  ?? 0} color={T.gold} />
-                    <StatPill label="Error"     value={sc.misspelled ?? 0} color={T.red} />
+                    <StatPill label="Unknown"   value={sc.unknown ?? sc.misspelled ?? 0} color={T.red} />
                   </div>
                   <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: T.inkSoft, paddingTop: 10, borderTop: `1px solid ${T.hairline}` }}>
                     <span>Language: <strong style={{ color: T.ink }}>{language || analytics.language || '—'}</strong></span>
