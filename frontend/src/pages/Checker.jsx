@@ -148,14 +148,13 @@ function highlightStatus(res, idx, grammarIssues) {
 function statusColor(status) {
   if (status === 'correct')   return T.forestDeep;
   if (status === 'suggested') return T.gold;
-  if (status === 'grammar')   return T.plum;
+  
   return T.red;
 }
 
 function statusTint(status) {
   if (status === 'correct')   return T.forestTint;
   if (status === 'suggested') return T.goldTint;
-  if (status === 'grammar')   return T.plumTint;
   return T.redTint;
 }
 
@@ -164,7 +163,6 @@ function statusLabel(status) {
   const s = status.toLowerCase();
   if (s === 'correct')   return 'Correct';
   if (s === 'suggested') return 'Suggested';
-  if (s === 'grammar')   return 'Grammar';
   return 'Unknown';
 }
 
