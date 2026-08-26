@@ -270,7 +270,7 @@ export default function Landing() {
               </h1>
 
               <p className="pnc-hero-sub" style={{ margin: '0 0 32px', maxWidth: 480, fontSize: 16, lineHeight: 1.7, color: T.inkSoft }}>
-                Paste a paragraph and two algorithms check it side by side, word by word — weighted Levenshtein distance and Jaro-Winkler similarity — so nothing slips through for being in the wrong language.
+                Paste a paragraph, and the system analyzes it word by word using both Levenshtein Edit Distance and Jaro-Winkler Similarity to identify spelling errors and generate appropriate word suggestions based on the bilingual dictionary.
               </p>
 
               <div className="pnc-hero-actions" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
