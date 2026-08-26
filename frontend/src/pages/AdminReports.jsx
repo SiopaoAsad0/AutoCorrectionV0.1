@@ -590,7 +590,7 @@ export default function AdminReports() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
                     {[
                       {
-                        title: 'Adapted Levenshtein', mark: '§',
+                        title: 'Levenshtein', mark: '§',
                         color: T.forestDeep, bg: T.forestTint, border: T.forest,
                         points: [
                           'Counts minimum edits: insert, delete, substitute',
