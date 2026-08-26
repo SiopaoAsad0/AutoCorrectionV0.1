@@ -228,15 +228,6 @@ export default function AdminDictionaryAdd() {
                 </div>
               </div>
 
-              {/* POS */}
-              <div>
-                <FieldLabel hint="optional">Part of speech</FieldLabel>
-                <select value={pos} onChange={e => setPos(e.target.value)} className="pnc-field-admin" style={fieldStyle}>
-                  {POS_OPTIONS.map(o => (
-                    <option key={o} value={o}>{o || '— Not specified —'}</option>
-                  ))}
-                </select>
-              </div>
 
               {/* Frequency */}
               <div>
