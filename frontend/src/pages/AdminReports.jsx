@@ -275,7 +275,7 @@ function CompareTool() {
               {/* Levenshtein */}
               <div style={{ background: T.forestTint, borderRadius: 7, padding: 18, border: `1px solid ${T.forest}26` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, fontWeight: 700, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 9 }}>
-                  Adapted Levenshtein
+                 Levenshtein
                 </div>
                 <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 26, fontWeight: 700, color: T.ink }}>{dec(result.levenshtein_distance, 2)}</div>
                 <div style={{ fontSize: 12, color: T.inkFaint, marginBottom: 10 }}>edit distance</div>
