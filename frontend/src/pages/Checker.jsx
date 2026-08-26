@@ -480,7 +480,6 @@ export default function Checker() {
                 {[
                   { dot: T.forest, label: 'Correct' },
                   { dot: T.gold,   label: 'Suggested' },
-                  { dot: T.plum,   label: 'Grammar' },
                   { dot: T.red,    label: 'Unknown' },
                 ].map((l, i) => (
                   <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.inkSoft }}>
