@@ -463,7 +463,11 @@ export default function Checker() {
                   rows={7}
                   value={text}
                   onChange={e => {
-                    const v     = e.target.value;
+                    // Strip special characters like # @ % $ & * etc. Letters
+                    // (incl. Filipino diacritics), numbers, whitespace, and
+                    // standard sentence punctuation are kept so normal
+                    // Taglish writing isn't affected.
+                    const v = e.target.value.replace(/[^\p{L}\p{N}\s.,'"!?\-:;()]/gu, '');
                     const words = v.trim() === '' ? [] : v.trim().split(/\s+/u);
                     if (words.length > MAX_INPUT_WORDS) return;
                     setText(v);
@@ -475,6 +479,10 @@ export default function Checker() {
                   className="textarea-with-highlight"
                   placeholder="Type or paste Taglish text here, then click Run Analysis…"
                 />
+              </div>
+
+              <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: -6, marginBottom: 12 }}>
+                Special characters (e.g. # @ % $ &amp; *) aren't allowed — only letters, numbers, and standard punctuation.
               </div>
 
               {/* Legend + counter */}
