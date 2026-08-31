@@ -438,7 +438,7 @@ export default function Checker() {
         {/* ── Left: input + results ── */}
         <div style={{ flex: '2', minWidth: 0 }}>
 
-          {/* Input card + Analysis summary, side by side */}
+          {/* Input card + full Results table, side by side */}
           <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
 
             {/* Input card */}
@@ -586,80 +586,7 @@ export default function Checker() {
               </div>
             </div>
 
-            {/* Analytics */}
-            <AnimatePresence>
-              {analytics && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  style={{ flex: '1 1 280px', minWidth: 260 }}
-                >
-                  <div style={{
-                    background: T.white, borderRadius: 8, padding: '18px 20px',
-                    border: `1px solid ${T.hairline}`,
-                  }}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
-                      Analysis summary
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-                      <StatPill label="Total"     value={analytics.total_words} />
-                      <StatPill label="Correct"   value={sc.correct    ?? 0} color={T.forestDeep} />
-                      <StatPill label="Suggested" value={sc.suggested  ?? 0} color={T.gold} />
-                      <StatPill label="Unknown"   value={sc.unknown ?? sc.misspelled ?? 0} color={T.red} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: T.inkSoft, paddingTop: 10, borderTop: `1px solid ${T.hairline}` }}>
-                      <span>Language: <strong style={{ color: T.ink }}>{language || analytics.language || '—'}</strong></span>
-                      <span>Correction rate: <strong style={{ color: T.ink }}>{(analytics.correction_rate * 100).toFixed(1)}%</strong></span>
-                      {typeof analytics.word_error_rate === 'number' && (
-                        <span>WER: <strong style={{ color: T.ink }}>{(analytics.word_error_rate * 100).toFixed(1)}%</strong></span>
-                      )}
-                      {latencyMs != null && (
-                        <span>Latency: <strong style={{ color: T.ink }}>{latencyMs} ms</strong></span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Error */}
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{ padding: '12px 16px', background: T.redTint, color: T.red, borderRadius: 6, marginBottom: 16, fontSize: 14, border: `1px solid ${T.red}33` }}
-              >
-                {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Grammar hints + Results table, side by side */}
-          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-
-            {/* Grammar hints */}
-            <AnimatePresence>
-              {grammarIssues.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  style={{ background: T.plumTint, borderRadius: 8, padding: '14px 18px', border: `1px solid ${T.plum}33`, flex: '1 1 280px', minWidth: 260 }}
-                >
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.plum, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                    Grammar hints ({grammarIssues.length})
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: T.inkSoft, lineHeight: 1.9 }}>
-                    {grammarIssues.map((g, i) => (
-                      <li key={i}>
-                        {g.message}{' '}
-                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", background: '#e3dcee', padding: '1px 7px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: T.plum }}>{g.replacement}</code>
-                      </li>
-                    ))}
-                  </ul>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Results table */}
+            {/* Results table (full results, beside the input card) */}
             <AnimatePresence>
               {results.length > 0 && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ flex: '2 1 420px', minWidth: 320 }}>
@@ -729,6 +656,79 @@ export default function Checker() {
                       </tbody>
                     </table>
                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Error */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                style={{ padding: '12px 16px', background: T.redTint, color: T.red, borderRadius: 6, marginBottom: 16, fontSize: 14, border: `1px solid ${T.red}33` }}
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Analysis summary + Grammar hints, side by side */}
+          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+
+            {/* Analytics */}
+            <AnimatePresence>
+              {analytics && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  style={{ flex: '1 1 280px', minWidth: 260 }}
+                >
+                  <div style={{
+                    background: T.white, borderRadius: 8, padding: '18px 20px',
+                    border: `1px solid ${T.hairline}`,
+                  }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
+                      Analysis summary
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                      <StatPill label="Total"     value={analytics.total_words} />
+                      <StatPill label="Correct"   value={sc.correct    ?? 0} color={T.forestDeep} />
+                      <StatPill label="Suggested" value={sc.suggested  ?? 0} color={T.gold} />
+                      <StatPill label="Unknown"   value={sc.unknown ?? sc.misspelled ?? 0} color={T.red} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: T.inkSoft, paddingTop: 10, borderTop: `1px solid ${T.hairline}` }}>
+                      <span>Language: <strong style={{ color: T.ink }}>{language || analytics.language || '—'}</strong></span>
+                      <span>Correction rate: <strong style={{ color: T.ink }}>{(analytics.correction_rate * 100).toFixed(1)}%</strong></span>
+                      {typeof analytics.word_error_rate === 'number' && (
+                        <span>WER: <strong style={{ color: T.ink }}>{(analytics.word_error_rate * 100).toFixed(1)}%</strong></span>
+                      )}
+                      {latencyMs != null && (
+                        <span>Latency: <strong style={{ color: T.ink }}>{latencyMs} ms</strong></span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Grammar hints */}
+            <AnimatePresence>
+              {grammarIssues.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  style={{ background: T.plumTint, borderRadius: 8, padding: '14px 18px', border: `1px solid ${T.plum}33`, flex: '1 1 280px', minWidth: 260 }}
+                >
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.plum, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                    Grammar hints ({grammarIssues.length})
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: T.inkSoft, lineHeight: 1.9 }}>
+                    {grammarIssues.map((g, i) => (
+                      <li key={i}>
+                        {g.message}{' '}
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", background: '#e3dcee', padding: '1px 7px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: T.plum }}>{g.replacement}</code>
+                      </li>
+                    ))}
+                  </ul>
                 </motion.div>
               )}
             </AnimatePresence>
