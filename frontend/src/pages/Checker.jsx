@@ -589,7 +589,7 @@ export default function Checker() {
             {/* Results table (full results, beside the input card) */}
             <AnimatePresence>
               {results.length > 0 && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ flex: '2 1 420px', minWidth: 320 }}>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ flex: '2 1 360px', minWidth: 300 }}>
                   <div style={{ fontSize: 12, color: T.inkFaint, marginBottom: 8 }}>
                     Click any word row to see its suggestions in the panel →
                   </div>
@@ -659,29 +659,13 @@ export default function Checker() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
-
-          {/* Error */}
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{ padding: '12px 16px', background: T.redTint, color: T.red, borderRadius: 6, marginBottom: 16, fontSize: 14, border: `1px solid ${T.red}33` }}
-              >
-                {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Analysis summary + Grammar hints, side by side */}
-          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
             {/* Analytics */}
             <AnimatePresence>
               {analytics && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  style={{ flex: '1 1 280px', minWidth: 260 }}
+                  style={{ flex: '1 1 260px', minWidth: 240 }}
                 >
                   <div style={{
                     background: T.white, borderRadius: 8, padding: '18px 20px',
@@ -710,7 +694,22 @@ export default function Checker() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
 
+          {/* Error */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                style={{ padding: '12px 16px', background: T.redTint, color: T.red, borderRadius: 6, marginBottom: 16, fontSize: 14, border: `1px solid ${T.red}33` }}
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Grammar hints */}
+          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {/* Grammar hints */}
             <AnimatePresence>
               {grammarIssues.length > 0 && (
