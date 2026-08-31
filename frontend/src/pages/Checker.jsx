@@ -634,101 +634,105 @@ export default function Checker() {
             )}
           </AnimatePresence>
 
-          {/* Grammar hints */}
-          <AnimatePresence>
-            {grammarIssues.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                style={{ background: T.plumTint, borderRadius: 8, padding: '14px 18px', marginBottom: 16, border: `1px solid ${T.plum}33` }}
-              >
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.plum, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                  Grammar hints ({grammarIssues.length})
-                </div>
-                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: T.inkSoft, lineHeight: 1.9 }}>
-                  {grammarIssues.map((g, i) => (
-                    <li key={i}>
-                      {g.message}{' '}
-                      <code style={{ fontFamily: "'IBM Plex Mono', monospace", background: '#e3dcee', padding: '1px 7px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: T.plum }}>{g.replacement}</code>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Grammar hints + Results table, side by side */}
+          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
-          {/* Results table */}
-          <AnimatePresence>
-            {results.length > 0 && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div style={{ fontSize: 12, color: T.inkFaint, marginBottom: 8 }}>
-                  Click any word row to see its suggestions in the panel →
-                </div>
-                <div style={{
-                  background: T.white, borderRadius: 8,
-                  border: `1px solid ${T.hairline}`,
-                  overflowX: 'auto',
-                }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: T.paperDim }}>
-                        {['#', 'Word', 'Status', 'Top Suggestion', 'Distance'].map((h, i) => (
-                          <th key={i} style={{
-                            padding: '12px 14px', textAlign: 'left',
-                            fontFamily: "'IBM Plex Mono', monospace",
-                            fontSize: 11, fontWeight: 600, color: T.forestDeep,
-                            textTransform: 'uppercase', letterSpacing: '0.05em',
-                            borderBottom: `1px solid ${T.hairline}`, whiteSpace: 'nowrap',
-                          }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <AnimatePresence>
-                        {results.map((res, i) => {
-                          const disp       = highlightStatus(res, i, grammarIssues);
-                          const topSug     = res.suggestions?.[0];
-                          const isSelected = selectedWordIndex === i;
-                          return (
-                            <motion.tr
-                              key={i}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: Math.min(i * 0.015, 0.3) }}
-                              onClick={() => setSelectedWordIndex(isSelected ? null : i)}
-                              style={{
-                                borderTop: `1px solid ${T.hairline}`,
-                                cursor: 'pointer',
-                                background: isSelected ? T.forestTint : T.white,
-                              }}
-                            >
-                              <td style={{ padding: '11px 14px', color: T.inkFaint, fontSize: 13, fontFamily: "'IBM Plex Mono', monospace" }}>{i + 1}</td>
-                              <td style={{ padding: '11px 14px', fontWeight: 700, color: T.ink, fontSize: 14 }}>{res.word}</td>
-                              <td style={{ padding: '11px 14px' }}>
-                                <span style={{
-                                  display: 'inline-block', padding: '3px 10px', borderRadius: 99,
-                                  fontSize: 12, fontWeight: 600,
-                                  background: statusTint(disp),
-                                  color: statusColor(disp),
-                                }}>
-                                  {statusLabel(disp)}
-                                </span>
-                              </td>
-                              <td style={{ padding: '11px 14px', fontSize: 14, color: T.forestDeep, fontWeight: 600 }}>
-                                {topSug ? topSug.word : <span style={{ color: T.inkFaint }}>—</span>}
-                              </td>
-                              <td style={{ padding: '11px 14px', fontSize: 13, color: T.inkFaint, fontFamily: "'IBM Plex Mono', monospace" }}>
-                                {topSug ? (topSug.distance ?? topSug.dist ?? '—') : '—'}
-                              </td>
-                            </motion.tr>
-                          );
-                        })}
-                      </AnimatePresence>
-                    </tbody>
-                  </table>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            {/* Grammar hints */}
+            <AnimatePresence>
+              {grammarIssues.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  style={{ background: T.plumTint, borderRadius: 8, padding: '14px 18px', border: `1px solid ${T.plum}33`, flex: '1 1 280px', minWidth: 260 }}
+                >
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.plum, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                    Grammar hints ({grammarIssues.length})
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: T.inkSoft, lineHeight: 1.9 }}>
+                    {grammarIssues.map((g, i) => (
+                      <li key={i}>
+                        {g.message}{' '}
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", background: '#e3dcee', padding: '1px 7px', borderRadius: 4, fontSize: 12, fontWeight: 600, color: T.plum }}>{g.replacement}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Results table */}
+            <AnimatePresence>
+              {results.length > 0 && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ flex: '2 1 420px', minWidth: 320 }}>
+                  <div style={{ fontSize: 12, color: T.inkFaint, marginBottom: 8 }}>
+                    Click any word row to see its suggestions in the panel →
+                  </div>
+                  <div style={{
+                    background: T.white, borderRadius: 8,
+                    border: `1px solid ${T.hairline}`,
+                    overflowX: 'auto',
+                  }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: T.paperDim }}>
+                          {['#', 'Word', 'Status', 'Top Suggestion', 'Distance'].map((h, i) => (
+                            <th key={i} style={{
+                              padding: '12px 14px', textAlign: 'left',
+                              fontFamily: "'IBM Plex Mono', monospace",
+                              fontSize: 11, fontWeight: 600, color: T.forestDeep,
+                              textTransform: 'uppercase', letterSpacing: '0.05em',
+                              borderBottom: `1px solid ${T.hairline}`, whiteSpace: 'nowrap',
+                            }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <AnimatePresence>
+                          {results.map((res, i) => {
+                            const disp       = highlightStatus(res, i, grammarIssues);
+                            const topSug     = res.suggestions?.[0];
+                            const isSelected = selectedWordIndex === i;
+                            return (
+                              <motion.tr
+                                key={i}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: Math.min(i * 0.015, 0.3) }}
+                                onClick={() => setSelectedWordIndex(isSelected ? null : i)}
+                                style={{
+                                  borderTop: `1px solid ${T.hairline}`,
+                                  cursor: 'pointer',
+                                  background: isSelected ? T.forestTint : T.white,
+                                }}
+                              >
+                                <td style={{ padding: '11px 14px', color: T.inkFaint, fontSize: 13, fontFamily: "'IBM Plex Mono', monospace" }}>{i + 1}</td>
+                                <td style={{ padding: '11px 14px', fontWeight: 700, color: T.ink, fontSize: 14 }}>{res.word}</td>
+                                <td style={{ padding: '11px 14px' }}>
+                                  <span style={{
+                                    display: 'inline-block', padding: '3px 10px', borderRadius: 99,
+                                    fontSize: 12, fontWeight: 600,
+                                    background: statusTint(disp),
+                                    color: statusColor(disp),
+                                  }}>
+                                    {statusLabel(disp)}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '11px 14px', fontSize: 14, color: T.forestDeep, fontWeight: 600 }}>
+                                  {topSug ? topSug.word : <span style={{ color: T.inkFaint }}>—</span>}
+                                </td>
+                                <td style={{ padding: '11px 14px', fontSize: 13, color: T.inkFaint, fontFamily: "'IBM Plex Mono', monospace" }}>
+                                  {topSug ? (topSug.distance ?? topSug.dist ?? '—') : '—'}
+                                </td>
+                              </motion.tr>
+                            );
+                          })}
+                        </AnimatePresence>
+                      </tbody>
+                    </table>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* ── Right sidebar ── */}
