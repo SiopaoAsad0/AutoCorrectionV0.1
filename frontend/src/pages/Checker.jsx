@@ -438,149 +438,188 @@ export default function Checker() {
         {/* ── Left: input + results ── */}
         <div style={{ flex: '2', minWidth: 0 }}>
 
-          {/* Input card */}
-          <div style={{
-            background: T.white, borderRadius: 8, padding: 24,
-            border: `1px solid ${T.hairline}`,
-            marginBottom: 20,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 12, borderBottom: `1px solid ${T.hairline}` }}>
-              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Input text
-              </span>
-            </div>
+          {/* Input card + Analysis summary, side by side */}
+          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
 
-            {/* Highlight wrapper */}
-            <div className={`textarea-highlight-wrap${canHighlight ? ' has-highlight' : ''}`} style={{ marginBottom: 12 }}>
-              <div ref={mirrorRef} className="textarea-mirror" aria-hidden="true">
-                {canHighlight ? mirrorContent : text || '\u00A0'}
+            {/* Input card */}
+            <div style={{
+              background: T.white, borderRadius: 8, padding: 24,
+              border: `1px solid ${T.hairline}`,
+              flex: '1 1 380px', minWidth: 320,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 12, borderBottom: `1px solid ${T.hairline}` }}>
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Input text
+                </span>
               </div>
-              <textarea
-                ref={textareaRef}
-                rows={7}
-                value={text}
-                onChange={e => {
-                  const v     = e.target.value;
-                  const words = v.trim() === '' ? [] : v.trim().split(/\s+/u);
-                  if (words.length > MAX_INPUT_WORDS) return;
-                  setText(v);
-                  setActiveSuggestion(null);
-                  setSelectedWordIndex(null);
-                }}
-                onScroll={syncScroll}
-                onClick={handleTextareaClick}
-                className="textarea-with-highlight"
-                placeholder="Type or paste Taglish text here, then click Run Analysis…"
-              />
-            </div>
 
-            {/* Legend + counter */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                {[
-                  { dot: T.forest, label: 'Correct' },
-                  { dot: T.gold,   label: 'Suggested' },
-                  { dot: T.red,    label: 'Unknown' },
-                ].map((l, i) => (
-                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.inkSoft }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: l.dot, display: 'inline-block' }} />
-                    {l.label}
-                  </span>
-                ))}
+              {/* Highlight wrapper */}
+              <div className={`textarea-highlight-wrap${canHighlight ? ' has-highlight' : ''}`} style={{ marginBottom: 12 }}>
+                <div ref={mirrorRef} className="textarea-mirror" aria-hidden="true">
+                  {canHighlight ? mirrorContent : text || '\u00A0'}
+                </div>
+                <textarea
+                  ref={textareaRef}
+                  rows={7}
+                  value={text}
+                  onChange={e => {
+                    const v     = e.target.value;
+                    const words = v.trim() === '' ? [] : v.trim().split(/\s+/u);
+                    if (words.length > MAX_INPUT_WORDS) return;
+                    setText(v);
+                    setActiveSuggestion(null);
+                    setSelectedWordIndex(null);
+                  }}
+                  onScroll={syncScroll}
+                  onClick={handleTextareaClick}
+                  className="textarea-with-highlight"
+                  placeholder="Type or paste Taglish text here, then click Run Analysis…"
+                />
               </div>
-              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 500, color: isAtLimit ? T.red : T.inkFaint }}>
-                {wordCount} / {MAX_INPUT_WORDS} words
-              </span>
-            </div>
 
-            {/* Inline popup */}
-            <div style={{ position: 'relative' }}>
-              <AnimatePresence>
-                {activeSuggestion && (
-                  <motion.div
-                    initial={{ scale: 0.96, opacity: 0, y: 6 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.96, opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    style={{
-                      position: 'absolute',
-                      left: activeSuggestion.x, top: -60,
-                      background: T.white,
-                      border: `1px solid ${T.hairline}`,
-                      borderRadius: 8, padding: 12,
-                      zIndex: 1000,
-                      boxShadow: '0 10px 28px rgba(22,36,29,0.14)',
-                      minWidth: 220, maxWidth: 300,
-                    }}
-                  >
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
-                      Suggestions
-                    </div>
-                    {activeSuggestion.suggestions.map((s, i) => (
-                      <motion.div
-                        key={i}
-                        whileHover={{ x: 3, backgroundColor: T.forestTint }}
-                        onClick={() => void applySuggestion(activeSuggestion.wordIndex, s.word, activeSuggestion.raw, activeSuggestion.phraseSpan ?? 1)}
-                        style={{
-                          cursor: 'pointer', padding: '8px 10px',
-                          borderRadius: 6, marginBottom: 4,
-                          border: `1px solid ${T.hairline}`,
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          transition: 'background 0.12s',
-                        }}
-                      >
-                        <span style={{ fontWeight: 700, color: T.forestDeep, fontSize: 14 }}>{s.word}</span>
-                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: T.inkFaint }}>
-                          {s.grammar ? 'grammar fix' : `dist: ${s.dist}`}
-                        </span>
-                      </motion.div>
-                    ))}
-                    <button
-                      onClick={() => setActiveSuggestion(null)}
-                      className="pnc-btn-ghost"
+              {/* Legend + counter */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  {[
+                    { dot: T.forest, label: 'Correct' },
+                    { dot: T.gold,   label: 'Suggested' },
+                    { dot: T.red,    label: 'Unknown' },
+                  ].map((l, i) => (
+                    <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.inkSoft }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: l.dot, display: 'inline-block' }} />
+                      {l.label}
+                    </span>
+                  ))}
+                </div>
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 500, color: isAtLimit ? T.red : T.inkFaint }}>
+                  {wordCount} / {MAX_INPUT_WORDS} words
+                </span>
+              </div>
+
+              {/* Inline popup */}
+              <div style={{ position: 'relative' }}>
+                <AnimatePresence>
+                  {activeSuggestion && (
+                    <motion.div
+                      initial={{ scale: 0.96, opacity: 0, y: 6 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.96, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
                       style={{
-                        width: '100%', marginTop: 8, height: 30, fontSize: 12,
-                        background: T.paperDim, color: T.inkSoft,
-                        border: `1px solid ${T.hairline}`, borderRadius: 6,
-                        cursor: 'pointer', minWidth: 'auto',
+                        position: 'absolute',
+                        left: activeSuggestion.x, top: -60,
+                        background: T.white,
+                        border: `1px solid ${T.hairline}`,
+                        borderRadius: 8, padding: 12,
+                        zIndex: 1000,
+                        boxShadow: '0 10px 28px rgba(22,36,29,0.14)',
+                        minWidth: 220, maxWidth: 300,
                       }}
                     >
-                      Close
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
+                        Suggestions
+                      </div>
+                      {activeSuggestion.suggestions.map((s, i) => (
+                        <motion.div
+                          key={i}
+                          whileHover={{ x: 3, backgroundColor: T.forestTint }}
+                          onClick={() => void applySuggestion(activeSuggestion.wordIndex, s.word, activeSuggestion.raw, activeSuggestion.phraseSpan ?? 1)}
+                          style={{
+                            cursor: 'pointer', padding: '8px 10px',
+                            borderRadius: 6, marginBottom: 4,
+                            border: `1px solid ${T.hairline}`,
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            transition: 'background 0.12s',
+                          }}
+                        >
+                          <span style={{ fontWeight: 700, color: T.forestDeep, fontSize: 14 }}>{s.word}</span>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: T.inkFaint }}>
+                            {s.grammar ? 'grammar fix' : `dist: ${s.dist}`}
+                          </span>
+                        </motion.div>
+                      ))}
+                      <button
+                        onClick={() => setActiveSuggestion(null)}
+                        className="pnc-btn-ghost"
+                        style={{
+                          width: '100%', marginTop: 8, height: 30, fontSize: 12,
+                          background: T.paperDim, color: T.inkSoft,
+                          border: `1px solid ${T.hairline}`, borderRadius: 6,
+                          cursor: 'pointer', minWidth: 'auto',
+                        }}
+                      >
+                        Close
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => void runAnalysis()}
+                  disabled={loading || !text.trim()}
+                  className="pnc-btn-primary"
+                  style={{
+                    flex: 1, height: 46, fontSize: 14.5, fontWeight: 700,
+                    background: loading || !text.trim() ? T.inkFaint : T.forestDeep,
+                    color: T.white, border: 'none', borderRadius: 6,
+                    cursor: loading || !text.trim() ? 'not-allowed' : 'pointer',
+                    minWidth: 'auto',
+                  }}
+                >
+                  {loading ? 'Analyzing…' : 'Run analysis'}
+                </button>
+                <button
+                  onClick={clearAll}
+                  className="pnc-btn-ghost"
+                  style={{
+                    height: 46, padding: '0 20px', fontSize: 14, fontWeight: 600,
+                    background: T.paperDim, color: T.inkSoft,
+                    border: `1px solid ${T.hairline}`, borderRadius: 6,
+                    cursor: 'pointer', minWidth: 'auto',
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
             </div>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => void runAnalysis()}
-                disabled={loading || !text.trim()}
-                className="pnc-btn-primary"
-                style={{
-                  flex: 1, height: 46, fontSize: 14.5, fontWeight: 700,
-                  background: loading || !text.trim() ? T.inkFaint : T.forestDeep,
-                  color: T.white, border: 'none', borderRadius: 6,
-                  cursor: loading || !text.trim() ? 'not-allowed' : 'pointer',
-                  minWidth: 'auto',
-                }}
-              >
-                {loading ? 'Analyzing…' : 'Run analysis'}
-              </button>
-              <button
-                onClick={clearAll}
-                className="pnc-btn-ghost"
-                style={{
-                  height: 46, padding: '0 20px', fontSize: 14, fontWeight: 600,
-                  background: T.paperDim, color: T.inkSoft,
-                  border: `1px solid ${T.hairline}`, borderRadius: 6,
-                  cursor: 'pointer', minWidth: 'auto',
-                }}
-              >
-                Clear
-              </button>
-            </div>
+            {/* Analytics */}
+            <AnimatePresence>
+              {analytics && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  style={{ flex: '1 1 280px', minWidth: 260 }}
+                >
+                  <div style={{
+                    background: T.white, borderRadius: 8, padding: '18px 20px',
+                    border: `1px solid ${T.hairline}`,
+                  }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
+                      Analysis summary
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                      <StatPill label="Total"     value={analytics.total_words} />
+                      <StatPill label="Correct"   value={sc.correct    ?? 0} color={T.forestDeep} />
+                      <StatPill label="Suggested" value={sc.suggested  ?? 0} color={T.gold} />
+                      <StatPill label="Unknown"   value={sc.unknown ?? sc.misspelled ?? 0} color={T.red} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: T.inkSoft, paddingTop: 10, borderTop: `1px solid ${T.hairline}` }}>
+                      <span>Language: <strong style={{ color: T.ink }}>{language || analytics.language || '—'}</strong></span>
+                      <span>Correction rate: <strong style={{ color: T.ink }}>{(analytics.correction_rate * 100).toFixed(1)}%</strong></span>
+                      {typeof analytics.word_error_rate === 'number' && (
+                        <span>WER: <strong style={{ color: T.ink }}>{(analytics.word_error_rate * 100).toFixed(1)}%</strong></span>
+                      )}
+                      {latencyMs != null && (
+                        <span>Latency: <strong style={{ color: T.ink }}>{latencyMs} ms</strong></span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Error */}
@@ -613,39 +652,6 @@ export default function Checker() {
                     </li>
                   ))}
                 </ul>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Analytics */}
-          <AnimatePresence>
-            {analytics && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                <div style={{
-                  background: T.white, borderRadius: 8, padding: '18px 20px',
-                  border: `1px solid ${T.hairline}`,
-                  marginBottom: 20,
-                }}>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: T.forestDeep, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
-                    Analysis summary
-                  </div>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-                    <StatPill label="Total"     value={analytics.total_words} />
-                    <StatPill label="Correct"   value={sc.correct    ?? 0} color={T.forestDeep} />
-                    <StatPill label="Suggested" value={sc.suggested  ?? 0} color={T.gold} />
-                    <StatPill label="Unknown"   value={sc.unknown ?? sc.misspelled ?? 0} color={T.red} />
-                  </div>
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: T.inkSoft, paddingTop: 10, borderTop: `1px solid ${T.hairline}` }}>
-                    <span>Language: <strong style={{ color: T.ink }}>{language || analytics.language || '—'}</strong></span>
-                    <span>Correction rate: <strong style={{ color: T.ink }}>{(analytics.correction_rate * 100).toFixed(1)}%</strong></span>
-                    {typeof analytics.word_error_rate === 'number' && (
-                      <span>WER: <strong style={{ color: T.ink }}>{(analytics.word_error_rate * 100).toFixed(1)}%</strong></span>
-                    )}
-                    {latencyMs != null && (
-                      <span>Latency: <strong style={{ color: T.ink }}>{latencyMs} ms</strong></span>
-                    )}
-                  </div>
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
