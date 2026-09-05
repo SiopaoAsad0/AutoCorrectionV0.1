@@ -1,9 +1,3 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
-
 /* ────────────────────────────────────────────────────────────────────────
    Same design tokens as Landing.jsx. Worth lifting into a shared
    /src/theme.js and importing in both places once you have a moment —
