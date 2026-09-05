@@ -846,3 +846,5 @@ export default function Checker() {
         </AnimatePresence>
       </div>
     </div>
+     };
+}
