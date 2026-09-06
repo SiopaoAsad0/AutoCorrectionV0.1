@@ -148,7 +148,7 @@ function highlightStatus(res, idx, grammarIssues) {
 function statusColor(status) {
   if (status === 'correct')   return T.forestDeep;
   if (status === 'suggested') return T.gold;
-
+  
   return T.red;
 }
 
@@ -238,14 +238,6 @@ export default function Checker() {
       })
     : [text];
 
-  /* ────────────────────────────────────────────────────────────────────
-     TEMP / TESTING: runAnalysis no longer calls the backend at all.
-     Clicking "Run analysis" with non-empty text now always resolves to
-     the error banner below, after a short simulated delay, so you can
-     see/verify what the error state looks like without needing the
-     API running. Swap this back to the real `fetch(${API_BASE}/api/correct...)`
-     call (see the commented block) whenever you want live analysis again.
-     ──────────────────────────────────────────────────────────────────── */
   const runAnalysis = async (textOverride) => {
     const source  = typeof textOverride === 'string' ? textOverride : text;
     const trimmed = String(source).trim();
@@ -256,17 +248,6 @@ export default function Checker() {
       return;
     }
     setError(null); setLoading(true);
-
-    // Simulated failure — remove this block and uncomment the real fetch
-    // block below to restore normal behavior.
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setError('Analysis failed. (Simulated error — backend call is disabled.)');
-    setResults([]); setGrammarIssues([]); setAnalytics(null);
-    setLanguage(null); setLatencyMs(null);
-    setLoading(false);
-    return;
-
-    /*
     try {
       const res = await fetch(`${API_BASE}/api/correct`, {
         method: 'POST',
@@ -290,7 +271,6 @@ export default function Checker() {
     } finally {
       setLoading(false);
     }
-    */
   };
 
   const handleTextareaClick = (e) => {
@@ -866,5 +846,5 @@ export default function Checker() {
         </AnimatePresence>
       </div>
     </div>
-  );
-}
+     };
+};
