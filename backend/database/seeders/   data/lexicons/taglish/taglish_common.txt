@@ -9998,3 +9998,379 @@ i-receive
 mag-receive
 nareceive
 i-download
+Actually
+Alam mo yun
+Anyway
+As in
+Basically
+Busy ako
+Chill ka lang
+Excited ako
+Feeling
+Ganon?
+Grabe
+I-explain mo
+I-try mo
+Late na ko
+Nervous ako
+Okay lang
+Praning
+So ano na?
+Sure ka ba?
+Talaga?
+basta
+beshie/bes
+boring
+break
+cellphone
+charger
+charot/char
+chat
+chika
+chill
+computer
+crush
+cute
+deadline
+edi wow
+email
+epal
+g
+gimik
+gwapo/pogi
+internet
+jowa
+jowa-in
+keri
+landi
+laptop
+lodi
+meeting
+okay
+petmalu
+push mo yan
+schedule
+sorry
+stress
+swerte
+text
+traffic
+weird
+wifi
+i-check mo
+i-print mo
+i-report mo
+i-save mo
+i-send mo
+mag-a-apply
+mag-log in
+mag-log out
+mag-me-meeting
+mag-present
+mag-research
+mag-submit
+na-late
+na-promote
+nag-apply
+nag-eexam
+nag-overtime
+nag-present
+nag-resign
+naka-absent
+i-charge mo
+i-check mo
+i-close mo
+i-delete mo
+i-download mo
+i-open mo
+i-print mo
+i-restart mo
+i-save mo
+i-update mo
+i-upload mo
+mag-charge
+mag-check
+mag-close
+mag-delete
+mag-download
+mag-open
+mag-print
+mag-restart
+mag-save
+mag-update
+mag-upload
+na-charge
+na-check
+na-close
+na-delete
+na-download
+na-open
+na-print
+na-restart
+na-save
+na-update
+na-upload
+nag-charge
+nag-download
+ma-in love
+ma-miss
+na-amaze
+na-bore
+na-confuse
+na-disappoint
+na-excite
+na-guilty
+na-inlove
+na-miss
+na-praning
+na-realize
+na-shock
+na-stress
+na-tempt
+na-touch
+na-turn off
+na-turn on
+i-block mo
+i-chat mo
+i-comment mo
+i-follow mo
+i-like mo
+i-message mo
+i-post mo
+i-reply mo
+i-screenshot mo
+i-search mo
+i-share mo
+i-tag mo
+i-text mo
+mag-block
+mag-chat
+mag-che-chat
+mag-comment
+mag-follow
+mag-like
+mag-log in
+mag-log out
+mag-message
+mag-post
+mag-reply
+mag-screenshot
+mag-search
+mag-share
+mag-tag
+mag-tetext / magte-text
+mag-text
+mag-video call
+na-block
+na-log out
+na-message
+na-post
+na-search
+na-share
+na-tag
+na-unfollow
+nag-chat
+nag-comment
+nag-follow
+nag-like
+nag-post
+nag-reply
+nag-screenshot
+nag-share
+nag-text
+nag-video call
+naka-log in
+tinext
+i-book mo
+i-cancel mo
+i-deliver mo
+i-order mo
+i-refund mo
+i-reserve mo
+i-swipe mo
+mag-book
+mag-cancel
+mag-deliver
+mag-order
+mag-refund
+mag-reserve
+mag-shopping
+mag-swipe
+mag-tipid
+na-book
+na-cancel
+na-deliver
+na-order
+na-refund
+na-reserve
+na-swipe
+nag-book
+nag-order
+nag-shopping
+i-drive mo
+i-drop mo
+i-park mo
+mag-drive
+mag-drop
+mag-Grab
+mag-park
+na-drop
+na-park
+nag-drive
+nag-Grab
+nag-park
+i-explain mo
+i-plan mo
+i-submit mo
+i-try mo
+mag-apply
+mag-explain
+mag-meeting
+mag-overtime
+mag-plan
+mag-practice
+mag-present
+mag-relax
+mag-research
+mag-resign
+mag-review
+mag-submit
+mag-try
+mag-work
+na-late
+na-promote
+na-submit
+nag-apply
+nag-explain
+nag-meeting
+nag-overtime
+nag-plan
+nag-practice
+nag-present
+nag-relax
+nag-research
+nag-resign
+nag-review
+nag-submit
+nag-try
+nag-work
+naka-absent
+i-deposit mo
+i-invest mo
+i-loan mo
+i-transfer mo
+i-withdraw mo
+mag-deposit
+mag-invest
+mag-loan
+mag-transfer
+mag-withdraw
+na-transfer
+nag-deposit
+nag-invest
+nag-loan
+nag-transfer
+nag-withdraw
+i-caption mo
+i-edit mo
+i-replay mo
+i-spoil mo
+i-stream mo
+mag-binge watch
+mag-caption
+mag-edit
+mag-Netflix
+mag-replay
+mag-stream
+mag-vlog
+na-edit
+na-spoil
+nag-binge watch
+nag-Netflix
+nag-stream
+nag-vlog
+i-blend mo
+i-boil mo
+i-dine in mo
+i-fry mo
+i-microwave mo
+i-mix mo
+mag-diet
+mag-grocery
+mag-skip ng meal
+mag-take out
+na-blend
+na-boil
+na-craving
+na-fry
+na-microwave
+na-mix
+nag-diet
+nag-grocery
+nag-take out
+i-install mo
+i-level up mo
+i-load mo
+i-uninstall mo
+mag-laro ng game
+mag-level up
+mag-load
+mag-login sa game
+mag-quit
+na-install
+na-level up
+na-load
+na-quit
+na-uninstall
+i-check mo ang blood pressure
+mag-check up
+mag-consult
+mag-gym
+mag-jog
+mag-recover
+mag-stretch
+mag-workout
+na-diagnose
+na-recover
+nag-check up
+nag-consult
+nag-gym
+nag-jog
+nag-stretch
+nag-workout
+i-arrange mo
+i-fix mo
+i-mop mo
+i-organize mo
+i-throw mo
+i-vacuum mo
+mag-mop
+mag-vacuum
+na-arrange
+na-fix
+na-organize
+na-throw
+nag-mop
+nag-vacuum
+i-friendzone mo
+mag-breakup
+mag-date
+mag-engage
+mag-jowa
+mag-patch up
+mag-propose
+na-breakup
+na-engage
+na-friendzone
+na-patch up
+na-propose
+nag-date
+mag-camping
+mag-picnic
+mag-swimming
+na-rainan
+na-stranded
+na-sunburn
+nag-camping
+nag-picnic
+nag-swimming
