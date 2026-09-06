@@ -148,7 +148,7 @@ function highlightStatus(res, idx, grammarIssues) {
 function statusColor(status) {
   if (status === 'correct')   return T.forestDeep;
   if (status === 'suggested') return T.gold;
-  
+
   return T.red;
 }
 
@@ -846,4 +846,5 @@ export default function Checker() {
         </AnimatePresence>
       </div>
     </div>
-     };
+  );
+}
