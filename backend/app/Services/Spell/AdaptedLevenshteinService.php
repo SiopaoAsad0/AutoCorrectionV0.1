@@ -3,6 +3,7 @@
 namespace App\Services\Spell;
 
 use App\Models\TypoPattern;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Taglish-oriented edit distance: configurable insert/delete/substitute costs
@@ -21,15 +22,20 @@ class AdaptedLevenshteinService
     public function __construct()
     {
         $costs = config('spelling.edit_costs', []);
-        // Forced to standard, uniform Levenshtein costs (insert/delete/substitute
-        // all = 1.0) and an empty substitution-weight table. Per-pair weighted
-        // costs from typo_patterns are intentionally NOT loaded here, so this
-        // now computes plain/standard Levenshtein edit distance rather than an
-        // adapted or phonetically-weighted variant.
         $this->insertCost = (float) ($costs['insert'] ?? 1.0);
         $this->deleteCost = (float) ($costs['delete'] ?? 1.0);
         $this->defaultSubstituteCost = (float) ($costs['substitute'] ?? 1.0);
-        $this->substitutionWeights = [];
+
+        // Per-pair weighted substitution costs (phonetic-style penalties for
+        // common Tagalog/Taglish typing confusions, e.g. f/p, v/b, e/i) are
+        // loaded from typo_patterns so this behaves as an adapted, not plain,
+        // Levenshtein distance. Cached since the service is constructed fresh
+        // on every request.
+        $this->substitutionWeights = Cache::remember(
+            'typo_pattern_substitution_weights',
+            3600,
+            fn () => TypoPattern::getSubstitutionWeights()
+        );
     }
 
     /**
