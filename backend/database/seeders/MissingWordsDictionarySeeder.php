@@ -9,6 +9,12 @@ use Illuminate\Support\Facades\DB;
  * Fills critical dictionary gaps found during testing.
  * Adds high-frequency English words that were missing,
  * causing common words like "I", "yesterday", "message" to be flagged.
+ *
+ * Also fills Tagalog/Taglish gaps found during testing (words reported as
+ * "Unknown" despite being common, plus hyphenated Taglish hybrid verbs that
+ * the morphology segmenter can't reconstruct on its own since it drops the
+ * hyphen when rebuilding prefix+root — same pattern as the existing
+ * mag-code / nag-code / mag-u-update entries in DictionarySeeder).
  */
 class MissingWordsDictionarySeeder extends Seeder
 {
@@ -17,7 +23,7 @@ class MissingWordsDictionarySeeder extends Seeder
     public function run(): void
     {
         $now = now()->toDateTimeString();
-        $words = $this->missingWords();
+        $words = array_merge($this->missingWords(), $this->missingTagalogTaglishWords());
 
         $batch = [];
         foreach ($words as $entry) {
@@ -33,6 +39,52 @@ class MissingWordsDictionarySeeder extends Seeder
         if (!empty($batch)) {
             DB::table('dictionaries')->insertOrIgnore($batch);
         }
+    }
+
+    /**
+     * Tagalog/Taglish words reported as "Unknown" during testing, plus
+     * hyphenated Taglish hybrid verbs that need a literal dictionary entry
+     * because morphology reconstruction doesn't preserve the hyphen.
+     * insertOrIgnore is idempotent, so this is safe to run even if some of
+     * these already exist via the bulk tagalog_dict.txt lexicon.
+     */
+    private function missingTagalogTaglishWords(): array
+    {
+        return [
+            // ── Reported "Unknown" — plain Tagalog words ─────────────────
+            ['word' => 'tinawag',      'language' => 'tagalog', 'pos' => 'Verb',      'frequency' => 7],
+            ['word' => 'uminom',       'language' => 'tagalog', 'pos' => 'Verb',      'frequency' => 8],
+            ['word' => 'katrabaho',    'language' => 'tagalog', 'pos' => 'Noun',      'frequency' => 6],
+            ['word' => 'swerte',       'language' => 'tagalog', 'pos' => 'Noun',      'frequency' => 7],
+            ['word' => 'basa',         'language' => 'tagalog', 'pos' => 'Verb',      'frequency' => 7],
+            ['word' => 'lumakad',      'language' => 'tagalog', 'pos' => 'Verb',      'frequency' => 7],
+            ['word' => 'madilim',      'language' => 'tagalog', 'pos' => 'Adjective', 'frequency' => 7],
+            ['word' => 'asukal',       'language' => 'tagalog', 'pos' => 'Noun',      'frequency' => 7],
+            ['word' => 'tsaa',         'language' => 'tagalog', 'pos' => 'Noun',      'frequency' => 6],
+            ['word' => 'ginagawa',     'language' => 'tagalog', 'pos' => 'Verb',      'frequency' => 8],
+            ['word' => 'nagsisimula',  'language' => 'tagalog', 'pos' => 'Verb',      'frequency' => 7],
+            ['word' => 'naghahanda',   'language' => 'tagalog', 'pos' => 'Verb',      'frequency' => 7],
+            ['word' => 'kaninang',     'language' => 'tagalog', 'pos' => 'Adverb',    'frequency' => 6],
+            ['word' => 'maagang',      'language' => 'tagalog', 'pos' => 'Adjective', 'frequency' => 6],
+            ['word' => 'kaunting',     'language' => 'tagalog', 'pos' => 'Adjective', 'frequency' => 6],
+
+            // ── Reduplicated intensifier — hyphen breaks tokenization ────
+            ['word' => 'gustong-gusto', 'language' => 'tagalog', 'pos' => 'Adjective', 'frequency' => 6],
+
+            // ── Hyphenated Taglish hybrid verbs (mirrors mag-code/nag-code
+            //    entries already in DictionarySeeder::taglishWords()) ─────
+            ['word' => 'mag-shopping',  'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'nag-shopping',  'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'mag-message',   'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'nag-message',   'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'na-promote',    'language' => 'taglish', 'pos' => 'Adjective', 'frequency' => 6],
+            ['word' => 'mag-lunch',     'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'nag-lunch',     'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'mag-logout',    'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'nag-logout',    'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'mag-celebrate', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+            ['word' => 'nag-celebrate', 'language' => 'taglish', 'pos' => 'Verb', 'frequency' => 6],
+        ];
     }
 
     private function missingWords(): array
