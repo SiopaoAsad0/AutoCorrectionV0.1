@@ -146,6 +146,26 @@ class SpellCorrectionService
                 continue;
             }
 
+            if (! $isPhraseHead && $entry === null && mb_substr($normalized, -2) === 'ng' && mb_strlen($normalized) > 3) {
+                $linkerRoot = mb_substr($normalized, 0, -2);
+                if (preg_match('/[aeiou]$/u', $linkerRoot) === 1) {
+                    $rootEntry = $this->dictionary->find($linkerRoot);
+                    if ($rootEntry !== null) {
+                        $wordResults[] = [
+                            'word' => $raw,
+                            'normalized' => $normalized,
+                            'status' => 'correct',
+                            'pos' => $rootEntry->pos ?? $this->posTagging->tag($linkerRoot, null),
+                            'suggestions' => [],
+                            'distance' => null,
+                            'language' => $rootEntry->language,
+                            'linker_attached' => true,
+                        ];
+                        continue;
+                    }
+                }
+            }
+
             if ($isPhraseHead) {
                 $directTarget = $span['target'];
                 $normalizedTarget = $this->normalizeSuggestionTarget($directTarget);
@@ -883,6 +903,10 @@ class SpellCorrectionService
                 continue;
             }
 
+            if ($right === 'ng') {
+                continue;
+            }
+
             $leftEntry = $this->dictionary->find($left);
             $rightEntry = $this->dictionary->find($right);
             if ($leftEntry === null || $rightEntry === null) {
@@ -895,7 +919,11 @@ class SpellCorrectionService
             }
 
             $joined = $left.' '.$right;
-            $distance = $this->levenshtein->distance($source, $left.$right);
+            // Compare against the joined-with-space form, not $left.$right (which
+            // is always == $source by construction and made every split "score"
+            // a fake 0.0 edit distance, unfairly beating real one-edit-distance
+            // whole-word corrections like kosina->kusina or pintu->pinto).
+            $distance = $this->levenshtein->distance($source, $joined);
             $leftPos = $leftEntry->pos ?? $this->posTagging->tag($left, null);
             $rightPos = $rightEntry->pos ?? $this->posTagging->tag($right, null);
             $pos = $leftPos.'/'.$rightPos;
@@ -912,7 +940,7 @@ class SpellCorrectionService
                 continue;
             }
 
-            $rankScore = round($distance, 2) - ($contextWeight * $contextScore) - (0.7 * $semanticScore) - 0.15;
+            $rankScore = round($distance, 2) - ($contextWeight * $contextScore) - (0.7 * $semanticScore);
             $results[] = [
                 'word' => $joined,
                 'compare_word' => str_replace(' ', '', $joined),
