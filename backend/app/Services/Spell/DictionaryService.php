@@ -45,12 +45,43 @@ class DictionaryService
         // be excluded here before distance scoring ever ran upstream.
         $limit = max($maxCandidates * 20, 200);
 
-        $rows = Dictionary::whereIn('language', $this->languages)
-            ->lengthWithin($len, $tolerance)
+        // Typos almost never change the first character. Now that the
+        // dictionary holds 100k+ rows (bulk lexicons across three
+        // languages), a plain length+frequency cutoff at $limit gets
+        // dominated by unrelated same-length words, crowding out the
+        // actual correction (e.g. "gutum" -> "gutom" never made the top
+        // 200 same-length words once thousands of others tied or beat its
+        // frequency). Narrowing to the same first letter first keeps the
+        // pool relevant; the true match is preserved almost every time.
+        $firstChar = mb_substr($normalizedWord, 0, 1);
+        $firstCharIsSafe = $firstChar !== '' && preg_match('/^[\p{L}\p{N}]$/u', $firstChar) === 1;
+
+        $query = Dictionary::whereIn('language', $this->languages)
+            ->lengthWithin($len, $tolerance);
+
+        if ($firstCharIsSafe) {
+            $query->where('word', 'like', $firstChar.'%');
+        }
+
+        $rows = $query
             ->orderByRaw('ABS(LENGTH(word) - ?) ASC', [$len])
             ->orderByDesc('frequency')
             ->limit($limit)
             ->get();
+
+        // Fallback for the rarer case where the first letter itself was
+        // mistyped: only broaden the search if the narrow pool came up
+        // short, so the common case doesn't reintroduce the crowding bug.
+        if ($firstCharIsSafe && $rows->count() < min($maxCandidates * 4, $limit)) {
+            $broader = Dictionary::whereIn('language', $this->languages)
+                ->lengthWithin($len, $tolerance)
+                ->where('word', 'not like', $firstChar.'%')
+                ->orderByRaw('ABS(LENGTH(word) - ?) ASC', [$len])
+                ->orderByDesc('frequency')
+                ->limit($limit)
+                ->get();
+            $rows = $rows->concat($broader);
+        }
 
         $out = [];
         foreach ($rows as $row) {
