@@ -317,6 +317,9 @@ return [
         'sakanila' => [
             'default' => 'sa kanila',
         ],
+        'sakin' => [
+            'default' => 'sa akin',
+        ],
         'samin' => [
             'default' => 'sa amin',
         ],
