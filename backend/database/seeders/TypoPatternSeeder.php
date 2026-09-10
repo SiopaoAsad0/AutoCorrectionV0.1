@@ -43,6 +43,7 @@ class TypoPatternSeeder extends Seeder
             ['v', 'b', 0.35],
             ['e', 'i', 0.4],
             ['o', 'u', 0.4],
+            ['a', 'o', 0.45],
             ['c', 'k', 0.45],
             ['c', 's', 0.55],
             ['d', 'r', 0.5],
