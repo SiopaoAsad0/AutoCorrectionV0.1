@@ -14,6 +14,17 @@ use Throwable;
 class AppServiceProvider extends ServiceProvider
 {
     /**
+     * Once DictionarySeeder has actually run its bulk lexicon imports
+     * (google-10000-english x2, typo corpora, tagalog_dict.txt x2,
+     * taglish_common.txt), the table holds well over this many rows.
+     * Used instead of a plain "any row exists" check, which used to
+     * permanently skip re-seeding the moment the table had even the
+     * ~200 curated words in it — silently blocking the bulk imports
+     * from ever running once they were added later.
+     */
+    private const FULLY_SEEDED_ROW_THRESHOLD = 5000;
+
+    /**
      * Register any application services.
      */
     public function register(): void
@@ -47,7 +58,13 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
-        if (DB::table('dictionaries')->exists()) {
+        // Was: DB::table('dictionaries')->exists() — true the moment even
+        // one curated word was present, which permanently skipped the bulk
+        // lexicon imports on every subsequent boot. A count threshold lets
+        // this correctly detect "curated words only, bulk import never ran"
+        // and backfill it once, while still skipping on every boot after
+        // the table is genuinely fully seeded.
+        if (DB::table('dictionaries')->count() >= self::FULLY_SEEDED_ROW_THRESHOLD) {
             return;
         }
 
@@ -56,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
                 '--class' => DictionarySeeder::class,
                 '--force' => true,
             ]);
+            Log::info('Dictionary auto-seed ran during boot (row count below fully-seeded threshold).');
         } catch (Throwable $e) {
             Log::warning('Failed to auto-seed dictionaries.', [
                 'error' => $e->getMessage(),
