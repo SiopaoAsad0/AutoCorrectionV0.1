@@ -101,7 +101,12 @@ class SpellController extends Controller
             $statusCounts   = $analytics['status_counts'] ?? [];
             $totalWords     = (int) ($analytics['total_words'] ?? 0);
             $correctWords   = (int) ($statusCounts['correct'] ?? 0);
-            $misspelled     = (int) ($statusCounts['misspelled'] ?? 0);
+            // Real status values are 'correct' / 'suggested' / 'unknown'
+            // (confirmed via /api/correct's own status_counts payload).
+            // This previously read 'misspelled', a key that never exists,
+            // so misspelled_words was always 0 and unknown words never
+            // produced a per-word detail row below.
+            $misspelled     = (int) ($statusCounts['unknown'] ?? 0);
             $suggested      = (int) ($statusCounts['suggested'] ?? 0);
             $correctionRate = (float) ($analytics['correction_rate'] ?? 0);
             $wer            = (float) ($analytics['word_error_rate'] ?? 0);
@@ -119,10 +124,10 @@ class SpellController extends Controller
                 'detected_language'=> $language,
             ];
 
-            // Log one row per misspelled/suggested word with algorithm comparison
+            // Log one row per misspelled/unknown/suggested word with algorithm comparison
             $wordRows = [];
             foreach ($result['words'] ?? [] as $wordResult) {
-                if (!in_array($wordResult['status'] ?? '', ['misspelled', 'suggested'])) continue;
+                if (!in_array($wordResult['status'] ?? '', ['unknown', 'suggested'], true)) continue;
                 $topSuggestion = $wordResult['suggestions'][0] ?? null;
                 $comparison    = $topSuggestion['algorithm_comparison'] ?? null;
 
@@ -146,13 +151,40 @@ class SpellController extends Controller
                 ]);
             }
 
+            // Always insert exactly one summary row per test run (this row
+            // has misspelled_word = null, since it's not present in
+            // $baseLog). Previously this only happened when there were NO
+            // flagged words, so a test's "row count" conflated "number of
+            // tests" with "number of flagged words" and could never be used
+            // as a reliable test-run count. Word-detail rows below are now
+            // additional, not a replacement for this summary row.
+            SpellCheckLog::create($baseLog);
+
             if (!empty($wordRows)) {
                 SpellCheckLog::insert($wordRows);
-            } else {
-                SpellCheckLog::create($baseLog);
             }
         } catch (\Throwable) {
             // Never fail the API response due to logging errors
         }
+    }
+
+    /**
+     * GET /api/user/test-count — number of test runs (not flagged words)
+     * a given student has performed, for the Profile page's "Tests run"
+     * badge. Counts only summary rows (misspelled_word IS NULL) so a test
+     * with several flagged words still counts as exactly one run.
+     */
+    public function testCount(Request $request): JsonResponse
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $count = SpellCheckLog::where('user_email', $request->query('email'))
+            ->whereNull('misspelled_word')
+            ->count();
+
+        return response()->json([
+            'email' => $request->query('email'),
+            'total_checks' => $count,
+        ]);
     }
 }
