@@ -57,6 +57,7 @@ function InfoRow({ label, value, mark }) {
 
 export default function Profile() {
   const [userData, setUserData] = useState(null);
+  const [liveTestCount, setLiveTestCount] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,10 +69,35 @@ export default function Profile() {
     } else { navigate('/login'); }
   }, [navigate]);
 
+  // The "Tests run" badge previously only ever showed whatever value was
+  // cached in localStorage at login/signup time, since nothing anywhere
+  // incremented it afterward. Now that Checker.jsx sends user_email with
+  // each request and the backend logs a reliable one-row-per-test summary,
+  // fetch the real count here instead.
+  useEffect(() => {
+    if (!userData?.email) return;
+    const API_BASE = import.meta.env.VITE_API_URL || '';
+    fetch(`${API_BASE}/api/user/test-count?email=${encodeURIComponent(userData.email)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        setLiveTestCount(data.total_checks);
+        // Keep the local cache in sync so it isn't stale next visit either.
+        const studentId = localStorage.getItem('pnc_user');
+        if (studentId) {
+          const updated = { ...userData, totalChecks: data.total_checks };
+          localStorage.setItem('student_' + studentId, JSON.stringify(updated));
+        }
+      })
+      .catch(() => { /* keep showing the cached value on failure */ });
+  }, [userData?.email]);
+
   if (!userData) return null;
 
   const initials = (userData.name || '?')
     .split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+  const testsRunDisplay = liveTestCount ?? userData.totalChecks ?? 0;
 
   return (
     <div className="pnc-profile" style={{
@@ -138,7 +164,7 @@ export default function Profile() {
               textAlign: 'center',
             }}>
               <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: 19, fontWeight: 700, color: T.white, lineHeight: 1 }}>
-                {userData.totalChecks || 0}
+                {testsRunDisplay}
               </div>
               <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: 'rgba(255,253,248,0.55)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 3 }}>
                 Tests run
