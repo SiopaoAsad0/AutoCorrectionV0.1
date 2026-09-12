@@ -251,10 +251,23 @@ export default function Checker() {
     }
     setError(null); setLoading(true);
     try {
+      // Attach the logged-in student's email so backend logs (and the
+      // Profile page's "Tests run" count) can be attributed to a user.
+      // Previously this was omitted entirely, so every SpellCheckLog row
+      // had user_email = null and per-student test counts were impossible.
+      let userEmail = null;
+      try {
+        const studentId = localStorage.getItem('pnc_user');
+        if (studentId) {
+          const saved = localStorage.getItem('student_' + studentId);
+          if (saved) userEmail = JSON.parse(saved)?.email ?? null;
+        }
+      } catch { /* ignore malformed localStorage data */ }
+
       const res = await fetch(`${API_BASE}/api/correct`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ text: trimmed }),
+        body: JSON.stringify({ text: trimmed, user_email: userEmail }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
