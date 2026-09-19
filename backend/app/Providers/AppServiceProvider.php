@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Database\Seeders\DictionarySeeder;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -38,6 +39,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->ensureSqliteDatabaseFile();
+
+        // Password::sendResetLink() normally builds a link to a backend
+        // Blade route, which doesn't exist in this SPA setup. Point it at
+        // the frontend's reset-password page instead, carrying the token
+        // and email as query params.
+        ResetPassword::createUrlUsing(function ($user, string $token) {
+            $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', '')), '/');
+            return $frontendUrl.'/reset-password?token='.$token.'&email='.urlencode($user->email);
+        });
 
         try {
             $this->seedDictionaryWhenEmpty();
