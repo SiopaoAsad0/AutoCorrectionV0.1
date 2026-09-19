@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const T = {
   paper:      '#f2f3ec',
@@ -41,14 +43,6 @@ const FONTS_IMPORT = `
   .pnc-password-toggle svg { width: 14px; height: 14px; display: block; flex-shrink: 0; }
 `;
 
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 export default function Login() {
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +50,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const justRegistered = location.state?.justRegistered === true;
 
   /* Guard: if a session already exists (e.g. the user reached this route
      via a stale back/swipe-back entry on mobile), don't force them through
@@ -86,37 +82,43 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const savedData = localStorage.getItem('student_' + studentId);
-      if (!savedData) {
-        setError('Access denied: student ID not recognized.');
+      // Credentials are now verified against the central database via the
+      // backend, not a localStorage lookup, so the same account works from
+      // any browser or device.
+      const res = await fetch(`${API_BASE}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ student_id: studentId.trim(), password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const firstError = data.errors ? Object.values(data.errors)[0]?.[0] : null;
+        setError(firstError || data.message || 'Access denied: student ID or password is incorrect.');
         return;
       }
-      let student;
-      try {
-        student = JSON.parse(savedData);
-      } catch (parseError) {
-        setError('Invalid account data. Please register again.');
-        return;
-      }
-      if (!student.passwordHash) {
-        setError('This account was created before password login. Please register again to set a password.');
-        return;
-      }
-      const passwordHash = await hashPassword(password);
-      if (student.passwordHash !== passwordHash) {
-        setError('Access denied: incorrect password.');
-        return;
-      }
+
       localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('pnc_user', studentId);
+      localStorage.setItem('pnc_user', studentId.trim());
+      localStorage.setItem('pnc_token', data.token);
+      // Kept for Checker.jsx/Profile.jsx's existing localStorage-based
+      // lookups; the source of truth is now the database, this is just a
+      // local cache seeded from the server's response.
+      localStorage.setItem('student_' + studentId.trim(), JSON.stringify({
+        name: data.user.name,
+        email: data.user.email,
+        id: data.user.student_id,
+        yearLevel: data.user.year_level,
+        section: data.user.section,
+        totalChecks: 0,
+      }));
       /* `replace: true` swaps this /login history entry out for /checker,
          so the stack becomes Home → Checker instead of Home → Login →
          Checker. That means the mobile back button / swipe-back gesture
          goes straight to Home instead of bouncing back to the sign-in
          form — while the session itself (localStorage) is untouched. */
       navigate('/checker', { replace: true });
-    } catch (loginError) {
-      setError('Login failed unexpectedly. Please try again.');
+    } catch {
+      setError('Could not reach the server. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -185,6 +187,21 @@ export default function Login() {
                 )}
               </button>
             </div>
+
+            <p style={{ margin: '-6px 0 0', textAlign: 'right' }}>
+              <Link to="/forgot-password" style={{ fontSize: 12, color: T.inkSoft, textDecoration: 'none' }}>
+                Forgot password?
+              </Link>
+            </p>
+
+            {justRegistered && !error && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                style={{ padding: '10px 14px', background: '#e6ede8', color: T.forestDeep, borderRadius: 6, fontSize: 13, border: `1px solid ${T.forestDeep}33` }}
+              >
+                You are now registered successfully. Please log in with your new account.
+              </motion.div>
+            )}
 
             {error && (
               <motion.div
