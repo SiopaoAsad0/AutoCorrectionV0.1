@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\SpellController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\StudentAuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 /*
@@ -13,6 +14,13 @@ use Illuminate\Support\Facades\Route;
 | API Routes
 |--------------------------------------------------------------------------
 */
+Route::post('/register', [StudentAuthController::class, 'register']);
+Route::post('/login', [StudentAuthController::class, 'login']);
+Route::post('/forgot-password', [StudentAuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [StudentAuthController::class, 'resetPassword']);
+Route::middleware('auth:sanctum')->post('/logout', [StudentAuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->get('/me', [StudentAuthController::class, 'me']);
+
 Route::post('/correct', [SpellController::class, 'correct']);
 Route::get('/user/test-count', [SpellController::class, 'testCount']);
 Route::post('/predict', [SpellController::class, 'predict']);
