@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/Landing";
 import Checker from "./pages/Checker";
 import Profile from "./pages/Profile";
@@ -15,7 +17,7 @@ import Navbar from "./components/Navbar";
 // This helper component hides the Navbar on Auth pages
 function Layout({ children }) {
   const location = useLocation();
-  const authPaths = ['/login', '/signup', '/', '/admin/login'];
+  const authPaths = ['/login', '/signup', '/', '/admin/login', '/forgot-password', '/reset-password'];
   const showNavbar = !authPaths.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
   return (
@@ -34,6 +36,8 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/checker" element={<Checker />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/messages" element={<StudentMessages />} />
