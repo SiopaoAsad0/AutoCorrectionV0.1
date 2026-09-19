@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 /* Same tokens as the rest of the app. */
 const T = {
   paper:      '#f2f3ec',
@@ -68,14 +70,6 @@ const FONTS_IMPORT = `
   .pnc-password-toggle svg { width: 18px; height: 18px; display: block; flex-shrink: 0; }
 `;
 
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 const fieldVariants = {
   hidden: { y: 8, opacity: 0 },
   visible: { y: 0, opacity: 1 },
@@ -131,23 +125,36 @@ export default function Signup() {
     }
     setLoading(true);
     try {
-      const passwordHash = await hashPassword(formData.password);
-      const fullName = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(' ');
-      const sectionLabel = `BSCS ${formData.yearLevel} - ${formData.section}`;
-      const studentData = {
-        name: fullName,
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        middleName: formData.middleName.trim(),
-        id: formData.id,
-        email: formData.email.trim(),
-        yearLevel: formData.yearLevel,
-        section: sectionLabel,
-        totalChecks: 0,
-        passwordHash,
-      };
-      localStorage.setItem('student_' + formData.id, JSON.stringify(studentData));
-      navigate('/login');
+      // Registration is now saved to the central database via the backend,
+      // not just to this browser's localStorage, so the account can be
+      // used to log in from any browser/device afterward.
+      const res = await fetch(`${API_BASE}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          first_name: formData.firstName.trim(),
+          last_name: formData.lastName.trim(),
+          middle_name: formData.middleName.trim(),
+          student_id: formData.id,
+          email: formData.email.trim(),
+          year_level: formData.yearLevel,
+          section: `BSCS ${formData.yearLevel} - ${formData.section}`,
+          password: formData.password,
+          password_confirmation: formData.password,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const firstError = data.errors ? Object.values(data.errors)[0]?.[0] : null;
+        setFormError(firstError || data.message || 'Registration failed. Please try again.');
+        return;
+      }
+      // Confirmation notification, then hand off to the login page so the
+      // "You are now registered" message is still visible after the
+      // redirect (per the required Register -> Confirmation -> Login flow).
+      navigate('/login', { state: { justRegistered: true } });
+    } catch {
+      setFormError('Could not reach the server. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -294,7 +301,7 @@ export default function Signup() {
                   style={{ width: 'auto', height: 'auto', marginTop: 3, flexShrink: 0 }}
                 />
                 <span>
-                  I have read and agree to the <strong style={{ color: T.ink }}>Terms and Agreement</strong> (use of this system for research, data handling, and participation guidelines). I understand my data will be stored locally for this study.
+                  I have read and agree to the <strong style={{ color: T.ink }}>Terms and Agreement</strong> (use of this system for research, data handling, and participation guidelines). I understand my data will be securely stored for this study.
                 </span>
               </label>
             </motion.div>
