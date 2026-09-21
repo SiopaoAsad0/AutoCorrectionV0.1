@@ -12,7 +12,8 @@ import AdminMessages from "./pages/AdminMessages";
 import AdminUsers from "./pages/AdminUsers";
 import AdminDictionaryAdd from "./pages/AdminDictionaryAdd";
 import AdminReports from "./pages/AdminReports";
-import Navbar from "./components/Navbar"; 
+import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // This helper component hides the Navbar on Auth pages
 function Layout({ children }) {
@@ -38,14 +39,14 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/checker" element={<Checker />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/messages" element={<StudentMessages />} />
+          <Route path="/checker" element={<ProtectedRoute type="student"><Checker /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute type="student"><Profile /></ProtectedRoute>} />
+          <Route path="/messages" element={<ProtectedRoute type="student"><StudentMessages /></ProtectedRoute>} />
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/messages" element={<AdminMessages />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/dictionary/add" element={<AdminDictionaryAdd />} />
-          <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/messages" element={<ProtectedRoute type="admin"><AdminMessages /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute type="admin"><AdminUsers /></ProtectedRoute>} />
+          <Route path="/admin/dictionary/add" element={<ProtectedRoute type="admin"><AdminDictionaryAdd /></ProtectedRoute>} />
+          <Route path="/admin/reports" element={<ProtectedRoute type="admin"><AdminReports /></ProtectedRoute>} />
         </Routes>
       </Layout>
     </Router>
