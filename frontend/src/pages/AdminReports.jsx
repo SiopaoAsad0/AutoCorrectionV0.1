@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { adminLogout } from '../utils/auth';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -343,6 +344,7 @@ const TABS = [
   { id: 'users',      label: 'Users',       mark: '○' },
   { id: 'misspelled', label: 'Top errors',  mark: '‡' },
   { id: 'compare',    label: 'Live compare', mark: '*' },
+  { id: 'imports',    label: 'Imported reports', mark: '↑' },
 ];
 
 const thStyle = (align = 'left') => ({
@@ -358,7 +360,88 @@ export default function AdminReports() {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
   const [tab,      setTab]      = useState('overview');
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState(null);
+  const [importBatches, setImportBatches] = useState([]);
+  const [importsLoaded, setImportsLoaded] = useState(false);
   const navigate = useNavigate();
+
+  const fetchImports = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/reports/imports`, { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) {
+        adminLogout();
+        navigate('/admin/login', { replace: true });
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      setImportBatches(data.batches || []);
+      setImportsLoaded(true);
+    } catch {
+      setImportsLoaded(true);
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    if (tab === 'imports' && !importsLoaded) fetchImports();
+  }, [tab, importsLoaded, fetchImports]);
+
+  const handleExportCsv = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/reports/export`, { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) {
+        adminLogout();
+        navigate('/admin/login', { replace: true });
+        return;
+      }
+      if (!res.ok) throw new Error(`Export failed: HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `PNC_Spell_Checker_Report_${Date.now()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const handleImportCsv = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+    setImporting(true);
+    setImportMsg(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch(`${API_BASE}/api/admin/reports/import`, {
+        method: 'POST',
+        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 || res.status === 403) {
+        adminLogout();
+        navigate('/admin/login', { replace: true });
+        return;
+      }
+      if (!res.ok) {
+        const firstError = data.errors ? Object.values(data.errors)[0]?.[0] : null;
+        throw new Error(firstError || data.message || `Import failed: HTTP ${res.status}`);
+      }
+      setImportMsg(`Imported ${data.imported_rows} row(s) from ${file.name}.`);
+      setImportsLoaded(false);
+      fetchData();
+    } catch (e) {
+      setImportMsg(null);
+      setError(e.message);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     const token = localStorage.getItem('admin_token');
@@ -443,8 +526,54 @@ export default function AdminReports() {
             >
               Refresh
             </button>
+            <button
+              onClick={handleExportCsv}
+              className="pnc-refresh-btn"
+              style={{
+                minWidth: 'auto', height: 38, padding: '0 16px', fontSize: 12.5, fontWeight: 700,
+                background: T.forestDeep, color: T.white, border: 'none',
+                borderRadius: 6, cursor: 'pointer',
+              }}
+            >
+              ↓ Export CSV
+            </button>
+            <label
+              className="pnc-refresh-btn"
+              style={{
+                minWidth: 'auto', height: 38, padding: '0 16px', fontSize: 12.5, fontWeight: 700,
+                background: T.white, color: T.forestDeep, border: `1.5px solid ${T.forest}33`,
+                borderRadius: 6, cursor: importing ? 'not-allowed' : 'pointer',
+                display: 'inline-flex', alignItems: 'center',
+              }}
+            >
+              {importing ? 'Importing…' : '↑ Import CSV'}
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleImportCsv}
+                disabled={importing}
+                style={{ display: 'none' }}
+              />
+            </label>
+            <button
+              onClick={() => { adminLogout(); navigate('/admin/login', { replace: true }); }}
+              className="pnc-refresh-btn"
+              style={{
+                minWidth: 'auto', height: 38, padding: '0 16px', fontSize: 12.5, fontWeight: 700,
+                background: 'transparent', color: T.red, border: `1.5px solid ${T.red}55`,
+                borderRadius: 6, cursor: 'pointer',
+              }}
+            >
+              Log Out
+            </button>
           </div>
         </header>
+
+        {importMsg && (
+          <div style={{ padding: '10px 14px', background: T.forestTint, color: T.forestDeep, borderRadius: 6, fontSize: 13, border: `1px solid ${T.forest}33`, marginBottom: 20 }}>
+            {importMsg}
+          </div>
+        )}
 
         {/* ── Tab bar ── */}
         <div style={{
@@ -766,6 +895,53 @@ export default function AdminReports() {
                   <div style={{ background: T.white, borderRadius: 8, padding: 24, border: `1px solid ${T.hairline}` }}>
                     <CompareTool />
                   </div>
+                </div>
+              )}
+
+              {/* ══ IMPORTED REPORTS ═══════════════════════════════════════ */}
+              {tab === 'imports' && (
+                <div>
+                  <SectionHead eyebrow="History">Previously imported CSV reports</SectionHead>
+                  {!importsLoaded ? (
+                    <div style={{ padding: 20, fontSize: 13, color: T.inkFaint }}>Loading…</div>
+                  ) : importBatches.length === 0 ? (
+                    <div style={{ background: T.white, borderRadius: 8, border: `1px solid ${T.hairline}` }}>
+                      <EmptyState message="No reports have been imported yet. Use the Import CSV button above to bring in a previously exported report." />
+                    </div>
+                  ) : (
+                    importBatches.map((batch) => (
+                      <div key={batch.batch} style={{ marginBottom: 24, background: T.white, borderRadius: 8, border: `1px solid ${T.hairline}`, overflow: 'hidden' }}>
+                        <div style={{ padding: '12px 16px', background: T.paperDim, fontSize: 12.5, fontWeight: 700, color: T.forestDeep, display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Imported {date(batch.batch)}</span>
+                          <span style={{ color: T.inkFaint, fontWeight: 500 }}>{batch.rows.length} row(s)</span>
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table>
+                            <thead>
+                              <tr style={{ background: T.paperDim }}>
+                                {['Email', 'Sessions', 'Words', 'Errors', 'Avg correction', 'Avg WER', 'Last active'].map((h, i) => (
+                                  <th key={i} style={thStyle(i > 0 ? 'right' : 'left')}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {batch.rows.map((r, i) => (
+                                <tr key={i} style={{ borderTop: `1px solid ${T.hairline}` }}>
+                                  <td style={{ ...tdStyle('left'), fontWeight: 600, color: T.ink }}>{r.user_email}</td>
+                                  <td style={tdStyle('right')}>{num(r.total_checks)}</td>
+                                  <td style={tdStyle('right')}>{num(r.total_words)}</td>
+                                  <td style={{ ...tdStyle('right'), fontWeight: 700, color: T.red }}>{num(r.total_misspelled)}</td>
+                                  <td style={tdStyle('right')}><Chip>{pct(r.avg_correction_rate)}</Chip></td>
+                                  <td style={tdStyle('right')}><Chip color={T.red} bg={T.redTint}>{pct(r.avg_word_error_rate)}</Chip></td>
+                                  <td style={{ ...tdStyle('right'), fontSize: 12, color: T.inkFaint, whiteSpace: 'nowrap' }}>{date(r.last_active)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
 
