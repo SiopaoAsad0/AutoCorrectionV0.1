@@ -83,4 +83,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/reports/overview', [ReportController::class, 'overview']);
     Route::get('/reports/users', [ReportController::class, 'users']);
     Route::post('/reports/compare', [ReportController::class, 'comparePair']);
+    Route::get('/reports/export', [ReportController::class, 'exportCsv']);
+    Route::post('/reports/import', [ReportController::class, 'importCsv']);
+    Route::get('/reports/imports', [ReportController::class, 'imports']);
 });
