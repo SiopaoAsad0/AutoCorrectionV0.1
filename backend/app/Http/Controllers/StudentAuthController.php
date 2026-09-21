@@ -71,7 +71,7 @@ class StudentAuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->validate([
-            'student_id' => ['required', 'string'],
+            'student_id' => ['required', 'string', 'size:7', 'regex:/^[0-9]+$/'],
             'password'   => ['required', 'string'],
         ]);
 
