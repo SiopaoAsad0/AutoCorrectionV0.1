@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { studentLogout } from '../utils/auth';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -439,7 +440,7 @@ export default function Checker() {
             ↓ Export CSV
           </button>
           <button
-            onClick={() => { localStorage.removeItem('isLoggedIn'); localStorage.removeItem('pnc_user'); navigate('/login'); }}
+            onClick={() => { studentLogout(); navigate('/login'); }}
             className="pnc-btn-ghost"
             style={{ minWidth: 'auto', height: 36, padding: '0 16px', fontSize: 13, fontWeight: 500, background: T.redTint, color: T.red, border: `1.5px solid ${T.red}33`, borderRadius: 6, cursor: 'pointer' }}
           >
