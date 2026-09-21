@@ -73,6 +73,11 @@ export default function Login() {
       return;
     }
 
+    if (studentId.trim().toLowerCase() !== 'admin' && !/^[0-9]{7}$/.test(studentId.trim())) {
+      setError('Student ID must be exactly 7 digits (numbers only).');
+      return;
+    }
+
     // Admin credentials are authenticated via the dedicated admin endpoint/page.
     if (studentId.trim().toLowerCase() === 'admin') {
       setError('Admin account must sign in on the admin login page.');
