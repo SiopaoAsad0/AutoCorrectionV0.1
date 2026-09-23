@@ -21,8 +21,8 @@ Route::post('/reset-password', [StudentAuthController::class, 'resetPassword']);
 Route::middleware('auth:sanctum')->post('/logout', [StudentAuthController::class, 'logout']);
 Route::middleware('auth:sanctum')->get('/me', [StudentAuthController::class, 'me']);
 
-Route::post('/correct', [SpellController::class, 'correct']);
-Route::get('/user/test-count', [SpellController::class, 'testCount']);
+Route::middleware('auth:sanctum')->post('/correct', [SpellController::class, 'correct']);
+Route::middleware('auth:sanctum')->get('/user/test-count', [SpellController::class, 'testCount']);
 Route::post('/predict', [SpellController::class, 'predict']);
 Route::post('/vocabulary/learn', [SpellController::class, 'learnLexeme']);
 Route::post('/compare', [SpellController::class, 'compare']);
