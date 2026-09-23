@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -87,12 +88,15 @@ class StudentAuthController extends Controller
             return response()->json(['message' => 'Admin accounts must sign in on the admin login page.'], 403);
         }
 
-        $user->tokens()->where('name', 'student')->delete();
-        $token = $user->createToken('student', ['student'])->plainTextToken;
+        // Server-side session, not a client-stored token: the browser
+        // receives an httpOnly session cookie it can't read or lose track
+        // of, and the server is the sole source of truth for who is
+        // logged in. Regenerating the session ID on login prevents
+        // session-fixation attacks.
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
 
         return response()->json([
-            'token' => $token,
-            'token_type' => 'Bearer',
             'user' => [
                 'id'         => $user->id,
                 'name'       => $user->name,
@@ -104,9 +108,17 @@ class StudentAuthController extends Controller
         ]);
     }
 
+    /**
+     * POST /api/logout
+     * Properly destroys the server-side session (not just a client-side
+     * flag), so the session is invalid immediately, from every tab/device
+     * that held it -- not merely "forgotten" by this browser.
+     */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out.']);
     }
