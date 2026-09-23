@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
+import { apiFetch } from '../utils/apiClient';
 
 /* Same tokens as the rest of the app. */
 const T = {
@@ -128,9 +127,8 @@ export default function Signup() {
       // Registration is now saved to the central database via the backend,
       // not just to this browser's localStorage, so the account can be
       // used to log in from any browser/device afterward.
-      const res = await fetch(`${API_BASE}/api/register`, {
+      const res = await apiFetch('/api/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           first_name: formData.firstName.trim(),
           last_name: formData.lastName.trim(),
