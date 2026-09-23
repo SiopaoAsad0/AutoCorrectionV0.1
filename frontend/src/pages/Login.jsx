@@ -73,15 +73,8 @@ export default function Login() {
       return;
     }
 
-    if (studentId.trim().toLowerCase() !== 'admin' && !/^[0-9]{7}$/.test(studentId.trim())) {
-      setError('Student ID must be exactly 7 digits (numbers only).');
-      return;
-    }
-
-    // Admin credentials are authenticated via the dedicated admin endpoint/page.
-    if (studentId.trim().toLowerCase() === 'admin') {
-      setError('Admin account must sign in on the admin login page.');
-      navigate('/admin/login');
+    if (!/^[0-9]{7}$/.test(studentId.trim())) {
+      setError('Student ID must be exactly 7 digits.');
       return;
     }
 
@@ -146,9 +139,11 @@ export default function Login() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <input
               type="text"
-              placeholder="Student ID"
+              inputMode="numeric"
+              placeholder="Student ID (7 digits)"
               value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
+              maxLength={7}
+              onChange={(e) => setStudentId(e.target.value.replace(/[^0-9]/g, '').slice(0, 7))}
             />
             <div style={{ position: 'relative' }}>
               <input
@@ -227,6 +222,11 @@ export default function Login() {
           <p style={{ marginTop: 8, fontSize: 13, textAlign: 'center' }}>
             <Link to="/" style={{ color: T.inkSoft, fontWeight: 500, textDecoration: 'none' }}>
               ← Back to home
+            </Link>
+          </p>
+          <p style={{ marginTop: 8, fontSize: 11.5, textAlign: 'center' }}>
+            <Link to="/admin/login" style={{ color: T.inkFaint, textDecoration: 'none' }}>
+              Admin login
             </Link>
           </p>
         </div>
