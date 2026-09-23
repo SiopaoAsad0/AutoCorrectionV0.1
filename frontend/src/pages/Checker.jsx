@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { studentLogout } from '../utils/auth';
+import { apiFetch } from '../utils/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /* ────────────────────────────────────────────────────────────────────────
    Same design tokens as Landing.jsx. Worth lifting into a shared
@@ -198,12 +197,6 @@ export default function Checker() {
   const mirrorRef   = useRef(null);
   const navigate    = useNavigate();
 
-  useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    const pncUser    = localStorage.getItem('pnc_user');
-    if (!isLoggedIn || !pncUser) navigate('/login', { replace: true });
-  }, [navigate]);
-
   const syncScroll = () => {
     if (textareaRef.current && mirrorRef.current) {
       mirrorRef.current.scrollTop  = textareaRef.current.scrollTop;
@@ -252,24 +245,17 @@ export default function Checker() {
     }
     setError(null); setLoading(true);
     try {
-      // Attach the logged-in student's email so backend logs (and the
-      // Profile page's "Tests run" count) can be attributed to a user.
-      // Previously this was omitted entirely, so every SpellCheckLog row
-      // had user_email = null and per-student test counts were impossible.
-      let userEmail = null;
-      try {
-        const studentId = localStorage.getItem('pnc_user');
-        if (studentId) {
-          const saved = localStorage.getItem('student_' + studentId);
-          if (saved) userEmail = JSON.parse(saved)?.email ?? null;
-        }
-      } catch { /* ignore malformed localStorage data */ }
-
-      const res = await fetch(`${API_BASE}/api/correct`, {
+      // /api/correct is now session-protected: the backend attributes
+      // this test run to whoever is actually logged in server-side,
+      // rather than trusting a client-supplied email field.
+      const res = await apiFetch('/api/correct', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ text: trimmed, user_email: userEmail }),
+        body: JSON.stringify({ text: trimmed }),
       });
+      if (res.status === 401) {
+        navigate('/login', { replace: true });
+        return;
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || `Request failed: ${res.status}`);
@@ -372,9 +358,8 @@ export default function Checker() {
     setSelectedWordIndex(null);
     const lex = String(replacementText).toLowerCase().trim().slice(0, 191);
     if (lex.length >= 2) {
-      void fetch(`${API_BASE}/api/vocabulary/learn`, {
+      void apiFetch('/api/vocabulary/learn', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ lexeme: lex }),
       }).catch(() => {});
     }
@@ -440,7 +425,7 @@ export default function Checker() {
             ↓ Export CSV
           </button>
           <button
-            onClick={() => { studentLogout(); navigate('/login'); }}
+            onClick={async () => { await studentLogout(); navigate('/login'); }}
             className="pnc-btn-ghost"
             style={{ minWidth: 'auto', height: 36, padding: '0 16px', fontSize: 13, fontWeight: 500, background: T.redTint, color: T.red, border: `1.5px solid ${T.red}33`, borderRadius: 6, cursor: 'pointer' }}
           >
