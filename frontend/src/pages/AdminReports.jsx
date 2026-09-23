@@ -2,17 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { adminLogout } from '../utils/auth';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
-
-function authHeaders() {
-  const token = localStorage.getItem('admin_token');
-  return {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+import { apiFetch } from '../utils/apiClient';
 
 const pct  = (v) => (v == null ? '—' : `${(Number(v) * 100).toFixed(1)}%`);
 const num  = (v) => (v == null ? '—' : Number(v).toLocaleString());
@@ -193,9 +183,8 @@ function CompareTool() {
     if (!source.trim() || !target.trim()) return;
     setLoading(true); setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/compare`, {
+      const res = await apiFetch('/api/compare', {
         method: 'POST',
-        headers: authHeaders(),
         body: JSON.stringify({ source: source.trim(), target: target.trim() }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -368,9 +357,9 @@ export default function AdminReports() {
 
   const fetchImports = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/reports/imports`, { headers: authHeaders() });
+      const res = await apiFetch('/api/admin/reports/imports');
       if (res.status === 401 || res.status === 403) {
-        adminLogout();
+        await adminLogout();
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -388,9 +377,9 @@ export default function AdminReports() {
 
   const handleExportCsv = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/reports/export`, { headers: authHeaders() });
+      const res = await apiFetch('/api/admin/reports/export');
       if (res.status === 401 || res.status === 403) {
-        adminLogout();
+        await adminLogout();
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -416,15 +405,13 @@ export default function AdminReports() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const token = localStorage.getItem('admin_token');
-      const res = await fetch(`${API_BASE}/api/admin/reports/import`, {
+      const res = await apiFetch('/api/admin/reports/import', {
         method: 'POST',
-        headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: formData,
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 401 || res.status === 403) {
-        adminLogout();
+        await adminLogout();
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -444,16 +431,14 @@ export default function AdminReports() {
   };
 
   const fetchData = useCallback(async () => {
-    const token = localStorage.getItem('admin_token');
-    if (!token) { navigate('/admin/login', { replace: true }); return; }
     setLoading(true); setError(null);
     try {
       const [ovRes, usRes] = await Promise.all([
-        fetch(`${API_BASE}/api/admin/reports/overview`, { headers: authHeaders() }),
-        fetch(`${API_BASE}/api/admin/reports/users`,    { headers: authHeaders() }),
+        apiFetch('/api/admin/reports/overview'),
+        apiFetch('/api/admin/reports/users'),
       ]);
       if (ovRes.status === 401 || ovRes.status === 403) {
-        localStorage.removeItem('admin_token');
+        await adminLogout();
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -556,7 +541,7 @@ export default function AdminReports() {
               />
             </label>
             <button
-              onClick={() => { adminLogout(); navigate('/admin/login', { replace: true }); }}
+              onClick={async () => { await adminLogout(); navigate('/admin/login', { replace: true }); }}
               className="pnc-refresh-btn"
               style={{
                 minWidth: 'auto', height: 38, padding: '0 16px', fontSize: 12.5, fontWeight: 700,
