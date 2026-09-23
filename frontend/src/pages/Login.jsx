@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
+import { apiFetch } from '../utils/apiClient';
+import { isStudentAuthenticated } from '../utils/auth';
 
 const T = {
   paper:      '#f2f3ec',
@@ -58,11 +58,11 @@ export default function Login() {
      the sign-in form again — just continue into the app. `replace: true`
      keeps this hop out of the history stack too. */
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    const pncUser = localStorage.getItem('pnc_user');
-    if (isLoggedIn === 'true' && pncUser) {
-      navigate('/checker', { replace: true });
-    }
+    let cancelled = false;
+    isStudentAuthenticated().then((ok) => {
+      if (ok && !cancelled) navigate('/checker', { replace: true });
+    });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   const handleLogin = async () => {
@@ -90,9 +90,8 @@ export default function Login() {
       // Credentials are now verified against the central database via the
       // backend, not a localStorage lookup, so the same account works from
       // any browser or device.
-      const res = await fetch(`${API_BASE}/api/login`, {
+      const res = await apiFetch('/api/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ student_id: studentId.trim(), password }),
       });
       const data = await res.json().catch(() => ({}));
@@ -102,20 +101,9 @@ export default function Login() {
         return;
       }
 
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('pnc_user', studentId.trim());
-      localStorage.setItem('pnc_token', data.token);
-      // Kept for Checker.jsx/Profile.jsx's existing localStorage-based
-      // lookups; the source of truth is now the database, this is just a
-      // local cache seeded from the server's response.
-      localStorage.setItem('student_' + studentId.trim(), JSON.stringify({
-        name: data.user.name,
-        email: data.user.email,
-        id: data.user.student_id,
-        yearLevel: data.user.year_level,
-        section: data.user.section,
-        totalChecks: 0,
-      }));
+      // No token or flag to store -- the server just set an httpOnly
+      // session cookie the browser will send automatically from here on.
+      // Checker.jsx/Profile.jsx fetch their own data via /api/me.
       /* `replace: true` swaps this /login history entry out for /checker,
          so the stack becomes Home → Checker instead of Home → Login →
          Checker. That means the mobile back button / swipe-back gesture
