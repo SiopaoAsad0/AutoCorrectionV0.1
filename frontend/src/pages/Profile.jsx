@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { apiFetch } from '../utils/apiClient';
+import { studentLogout } from '../utils/auth';
 
 /* Same tokens as Landing / Checker / Navbar / StudentMessages. */
 const T = {
@@ -58,46 +60,44 @@ function InfoRow({ label, value, mark }) {
 export default function Profile() {
   const [userData, setUserData] = useState(null);
   const [liveTestCount, setLiveTestCount] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // User data now comes from the authenticated session, not a localStorage
+  // cache -- there's nothing to read client-side about who's logged in
+  // anymore, so this asks the server directly.
   useEffect(() => {
-    const studentId = localStorage.getItem('pnc_user');
-    const savedData = localStorage.getItem('student_' + studentId);
-    if (savedData) {
-      try { setUserData(JSON.parse(savedData)); }
-      catch { localStorage.removeItem('student_' + studentId); navigate('/login'); }
-    } else { navigate('/login'); }
+    let cancelled = false;
+    apiFetch('/api/me')
+      .then(async (res) => {
+        if (!res.ok) {
+          if (!cancelled) navigate('/login', { replace: true });
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) setUserData(data);
+      })
+      .catch(() => { if (!cancelled) navigate('/login', { replace: true }); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [navigate]);
 
-  // The "Tests run" badge previously only ever showed whatever value was
-  // cached in localStorage at login/signup time, since nothing anywhere
-  // incremented it afterward. Now that Checker.jsx sends user_email with
-  // each request and the backend logs a reliable one-row-per-test summary,
-  // fetch the real count here instead.
+  // The "Tests run" badge is scoped to whoever the session says is logged
+  // in server-side -- no email param needed or trusted from the client.
   useEffect(() => {
-    if (!userData?.email) return;
-    const API_BASE = import.meta.env.VITE_API_URL || '';
-    fetch(`${API_BASE}/api/user/test-count?email=${encodeURIComponent(userData.email)}`)
+    if (!userData) return;
+    apiFetch('/api/user/test-count')
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (!data) return;
-        setLiveTestCount(data.total_checks);
-        // Keep the local cache in sync so it isn't stale next visit either.
-        const studentId = localStorage.getItem('pnc_user');
-        if (studentId) {
-          const updated = { ...userData, totalChecks: data.total_checks };
-          localStorage.setItem('student_' + studentId, JSON.stringify(updated));
-        }
-      })
-      .catch(() => { /* keep showing the cached value on failure */ });
-  }, [userData?.email]);
+      .then(data => { if (data) setLiveTestCount(data.total_checks); })
+      .catch(() => {});
+  }, [userData]);
 
-  if (!userData) return null;
+  if (loading || !userData) return null;
 
   const initials = (userData.name || '?')
     .split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-  const testsRunDisplay = liveTestCount ?? userData.totalChecks ?? 0;
+  const testsRunDisplay = liveTestCount ?? 0;
 
   return (
     <div className="pnc-profile" style={{
@@ -177,9 +177,9 @@ export default function Profile() {
 
             {/* Info rows */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-              <InfoRow label="Student ID"     value={userData.id}      mark="№" />
-              <InfoRow label="Year & section" value={userData.section} mark="§" />
-              <InfoRow label="Email"          value={userData.email}   mark="‡" />
+              <InfoRow label="Student ID"     value={userData.student_id} mark="№" />
+              <InfoRow label="Year & section" value={userData.section}    mark="§" />
+              <InfoRow label="Email"          value={userData.email}      mark="‡" />
             </div>
 
             <div style={{ height: 1, background: T.hairline, marginBottom: 20 }} />
@@ -213,9 +213,8 @@ export default function Profile() {
               </button>
 
               <button
-                onClick={() => {
-                  localStorage.removeItem('isLoggedIn');
-                  localStorage.removeItem('pnc_user');
+                onClick={async () => {
+                  await studentLogout();
                   navigate('/login');
                 }}
                 style={{
