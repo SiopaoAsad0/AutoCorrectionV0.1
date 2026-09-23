@@ -1,22 +1,23 @@
-// Centralized session helpers. Nothing here clears storage except the
-// explicit logout functions — session state should only ever be cleared
-// when the user intentionally logs out, never as a side effect of
-// navigating to another page (e.g. clicking Home).
+import { apiFetch } from './apiClient';
 
-export function isAdminAuthenticated() {
-  return !!localStorage.getItem('admin_token');
+// Auth state now lives entirely in an httpOnly session cookie the browser
+// manages -- there is nothing for this code to read directly, so every
+// check is a real request to the server asking "is this session valid?"
+
+export async function isStudentAuthenticated() {
+  const res = await apiFetch('/api/me');
+  return res.ok;
 }
 
-export function isStudentAuthenticated() {
-  return localStorage.getItem('isLoggedIn') === 'true' && !!localStorage.getItem('pnc_token');
+export async function isAdminAuthenticated() {
+  const res = await apiFetch('/api/admin/me');
+  return res.ok;
 }
 
-export function adminLogout() {
-  localStorage.removeItem('admin_token');
+export async function studentLogout() {
+  await apiFetch('/api/logout', { method: 'POST' });
 }
 
-export function studentLogout() {
-  localStorage.removeItem('isLoggedIn');
-  localStorage.removeItem('pnc_user');
-  localStorage.removeItem('pnc_token');
+export async function adminLogout() {
+  await apiFetch('/api/admin/logout', { method: 'POST' });
 }
