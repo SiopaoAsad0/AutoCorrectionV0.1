@@ -25,7 +25,10 @@ class SpellController extends Controller
     {
         $request->validate(['text' => 'required|string|max:10000']);
         $text  = $request->input('text');
-        $email = $request->input('user_email');
+        // Previously trusted a client-supplied 'user_email' field, which
+        // anyone could spoof to attribute test runs to someone else. Now
+        // that real login exists, the session is the source of truth.
+        $email = $request->user()?->email;
         $start = microtime(true);
 
         $result = $this->correctionService->correct($text);
@@ -170,20 +173,24 @@ class SpellController extends Controller
 
     /**
      * GET /api/user/test-count — number of test runs (not flagged words)
-     * a given student has performed, for the Profile page's "Tests run"
-     * badge. Counts only summary rows (misspelled_word IS NULL) so a test
-     * with several flagged words still counts as exactly one run.
+     * the logged-in student has performed, for the Profile page's
+     * "Tests run" badge. Counts only summary rows (misspelled_word IS
+     * NULL) so a test with several flagged words still counts as one run.
+     *
+     * Previously took an open 'email' query param, meaning anyone could
+     * fetch anyone else's test count. Now scoped to the authenticated
+     * session -- protected by auth:sanctum in routes/api.php.
      */
     public function testCount(Request $request): JsonResponse
     {
-        $request->validate(['email' => 'required|email']);
+        $email = $request->user()?->email;
 
-        $count = SpellCheckLog::where('user_email', $request->query('email'))
+        $count = SpellCheckLog::where('user_email', $email)
             ->whereNull('misspelled_word')
             ->count();
 
         return response()->json([
-            'email' => $request->query('email'),
+            'email' => $email,
             'total_checks' => $count,
         ]);
     }
