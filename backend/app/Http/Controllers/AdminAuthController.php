@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -33,12 +34,14 @@ class AdminAuthController extends Controller
             return response()->json(['message' => 'This account is not an administrator.'], 403);
         }
 
-        $user->tokens()->where('name', 'admin')->delete();
-        $token = $user->createToken('admin', ['admin'])->plainTextToken;
+        // Server-side session instead of a bearer token. The httpOnly
+        // cookie the browser receives can't be read by JS or copied out
+        // of localStorage, and regenerating the session ID here prevents
+        // session-fixation attacks.
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
 
         return response()->json([
-            'token' => $token,
-            'token_type' => 'Bearer',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -48,9 +51,16 @@ class AdminAuthController extends Controller
         ]);
     }
 
+    /**
+     * POST /api/admin/logout
+     * Destroys the server-side session outright -- the admin is logged out
+     * everywhere this session was active, not just in this browser tab.
+     */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out.']);
     }
