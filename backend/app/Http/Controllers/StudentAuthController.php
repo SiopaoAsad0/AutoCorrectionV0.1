@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -65,9 +64,15 @@ class StudentAuthController extends Controller
 
     /**
      * POST /api/login
-     * Verifies credentials against the central database (not localStorage)
-     * and issues a Sanctum token, so the same account works from any
-     * browser or device.
+     * Verifies credentials against the central database and issues a
+     * Sanctum personal access token (Bearer auth), rather than starting a
+     * server-side session. A session cookie can't be shared between the
+     * frontend (Vercel) and backend (Render) since they're on unrelated
+     * root domains -- the browser will never expose one domain's cookie
+     * to JavaScript running on the other, so cookie/session auth (and the
+     * CSRF-cookie flow it depends on) cannot work across this split. A
+     * bearer token sent explicitly in an Authorization header has no such
+     * restriction.
      */
     public function login(Request $request): JsonResponse
     {
@@ -88,15 +93,10 @@ class StudentAuthController extends Controller
             return response()->json(['message' => 'Admin accounts must sign in on the admin login page.'], 403);
         }
 
-        // Server-side session, not a client-stored token: the browser
-        // receives an httpOnly session cookie it can't read or lose track
-        // of, and the server is the sole source of truth for who is
-        // logged in. Regenerating the session ID on login prevents
-        // session-fixation attacks.
-        Auth::guard('web')->login($user);
-        $request->session()->regenerate();
+        $token = $user->createToken('spa-token')->plainTextToken;
 
         return response()->json([
+            'token' => $token,
             'user' => [
                 'id'         => $user->id,
                 'name'       => $user->name,
@@ -110,15 +110,12 @@ class StudentAuthController extends Controller
 
     /**
      * POST /api/logout
-     * Properly destroys the server-side session (not just a client-side
-     * flag), so the session is invalid immediately, from every tab/device
-     * that held it -- not merely "forgotten" by this browser.
+     * Revokes only the token used to authenticate this request, so other
+     * devices/browsers the user is logged in on stay logged in.
      */
     public function logout(Request $request): JsonResponse
     {
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out.']);
     }
