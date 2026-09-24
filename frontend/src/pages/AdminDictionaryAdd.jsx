@@ -1,17 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
-
-function authHeaders() {
-  const token = localStorage.getItem('admin_token');
-  return {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+import { apiFetch, getAuthToken, setAuthToken } from '../utils/apiClient';
 
 const T = {
   paper:      '#f2f3ec',
@@ -98,15 +88,13 @@ export default function AdminDictionaryAdd() {
   const saveWord = async (e) => {
     e.preventDefault();
     setError(null); setSuccess(null);
-    const token = localStorage.getItem('admin_token');
-    if (!token) { navigate('/admin/login', { replace: true }); return; }
+    if (!getAuthToken()) { navigate('/admin/login', { replace: true }); return; }
     if (!word.trim()) { setError('Word is required.'); return; }
 
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/dictionary`, {
+      const res = await apiFetch('/api/admin/dictionary', {
         method: 'POST',
-        headers: authHeaders(),
         body: JSON.stringify({
           word: word.trim(), language,
           pos: pos.trim() || null,
@@ -114,7 +102,7 @@ export default function AdminDictionaryAdd() {
         }),
       });
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('admin_token');
+        setAuthToken(null);
         navigate('/admin/login', { replace: true });
         return;
       }
