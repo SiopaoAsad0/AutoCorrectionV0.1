@@ -1,16 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
-
-function authHeaders() {
-  const token = localStorage.getItem('admin_token');
-  return {
-    Accept: 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+import { apiFetch, getAuthToken, setAuthToken } from '../utils/apiClient';
 
 /* Same manuscript tokens as AdminReports / Landing / Profile. */
 const T = {
@@ -118,13 +109,12 @@ export default function AdminUsers() {
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
-    const token = localStorage.getItem('admin_token');
-    if (!token) { navigate('/admin/login', { replace: true }); return; }
+    if (!getAuthToken()) { navigate('/admin/login', { replace: true }); return; }
     setLoading(true); setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users?per_page=100`, { headers: authHeaders() });
+      const res = await apiFetch('/api/admin/users?per_page=100');
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('admin_token');
+        setAuthToken(null);
         navigate('/admin/login', { replace: true });
         return;
       }
