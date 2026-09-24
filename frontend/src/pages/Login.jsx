@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { apiFetch } from '../utils/apiClient';
+import { apiFetch, setAuthToken } from '../utils/apiClient';
 import { isStudentAuthenticated } from '../utils/auth';
 
 const T = {
@@ -80,7 +80,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // Credentials are now verified against the central database via the
+      // Credentials are verified against the central database via the
       // backend, not a localStorage lookup, so the same account works from
       // any browser or device.
       const res = await apiFetch('/api/login', {
@@ -94,14 +94,17 @@ export default function Login() {
         return;
       }
 
-      // No token or flag to store -- the server just set an httpOnly
-      // session cookie the browser will send automatically from here on.
-      // Checker.jsx/Profile.jsx fetch their own data via /api/me.
+      // The frontend (Vercel) and backend (Render) are on unrelated root
+      // domains, so a session cookie can't be shared between them -- the
+      // server issues a bearer token instead, which apiFetch attaches to
+      // every subsequent request as an Authorization header.
+      setAuthToken(data.token);
+
       /* `replace: true` swaps this /login history entry out for /checker,
          so the stack becomes Home → Checker instead of Home → Login →
          Checker. That means the mobile back button / swipe-back gesture
          goes straight to Home instead of bouncing back to the sign-in
-         form — while the session itself (localStorage) is untouched. */
+         form. */
       navigate('/checker', { replace: true });
     } catch {
       setError('Could not reach the server. Please check your connection and try again.');
