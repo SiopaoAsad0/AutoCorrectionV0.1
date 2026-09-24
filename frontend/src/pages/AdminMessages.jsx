@@ -1,17 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
-
-function authHeaders() {
-  const token = localStorage.getItem('admin_token');
-  return {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+import { apiFetch, getAuthToken, setAuthToken } from '../utils/apiClient';
 
 const T = {
   paper:      '#f2f3ec',
@@ -92,14 +82,13 @@ export default function AdminMessages() {
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
-    const token = localStorage.getItem('admin_token');
-    if (!token) { navigate('/admin/login', { replace: true }); return; }
+    if (!getAuthToken()) { navigate('/admin/login', { replace: true }); return; }
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/contact-messages`, { headers: authHeaders() });
+      const res = await apiFetch('/api/admin/contact-messages');
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('admin_token');
+        setAuthToken(null);
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -130,13 +119,12 @@ export default function AdminMessages() {
     if (!body) { setError('Enter a reply before saving.'); return; }
     setSavingId(id); setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/contact-messages/${id}/reply`, {
+      const res = await apiFetch(`/api/admin/contact-messages/${id}/reply`, {
         method: 'POST',
-        headers: authHeaders(),
         body: JSON.stringify({ admin_reply: body }),
       });
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('admin_token');
+        setAuthToken(null);
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -156,9 +144,9 @@ export default function AdminMessages() {
 
   const logout = async () => {
     try {
-      await fetch(`${API_BASE}/api/admin/logout`, { method: 'POST', headers: authHeaders() });
+      await apiFetch('/api/admin/logout', { method: 'POST' });
     } catch { /* ignore */ }
-    localStorage.removeItem('admin_token');
+    setAuthToken(null);
     navigate('/admin/login', { replace: true });
   };
 
