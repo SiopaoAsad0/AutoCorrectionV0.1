@@ -1,8 +1,8 @@
-import { apiFetch } from './apiClient';
+import { apiFetch, setAuthToken } from './apiClient';
 
-// Auth state now lives entirely in an httpOnly session cookie the browser
-// manages -- there is nothing for this code to read directly, so every
-// check is a real request to the server asking "is this session valid?"
+// Auth state lives in a bearer token (see apiClient.js), not a cookie.
+// isAuthenticated() still asks the server, since a locally-present token
+// could be expired or revoked.
 
 export async function isStudentAuthenticated() {
   const res = await apiFetch('/api/me');
@@ -16,8 +16,10 @@ export async function isAdminAuthenticated() {
 
 export async function studentLogout() {
   await apiFetch('/api/logout', { method: 'POST' });
+  setAuthToken(null);
 }
 
 export async function adminLogout() {
   await apiFetch('/api/admin/logout', { method: 'POST' });
+  setAuthToken(null);
 }
