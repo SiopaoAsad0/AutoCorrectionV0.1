@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { apiFetch } from '../utils/apiClient';
+import { apiFetch, setAuthToken } from '../utils/apiClient';
 
 /* Same manuscript tokens as Landing / Checker / Profile / AdminReports. */
 const T = {
@@ -64,7 +64,11 @@ export default function AdminLogin() {
           `Login failed (${res.status})`;
         throw new Error(msg);
       }
-      // No token to store -- the server set an httpOnly session cookie.
+      // The frontend (Vercel) and backend (Render) are on unrelated root
+      // domains, so a session cookie can't be shared between them -- the
+      // server issues a bearer token instead, which apiFetch attaches to
+      // every subsequent request as an Authorization header.
+      setAuthToken(data.token);
       navigate('/admin/messages', { replace: true });
     } catch (e) {
       setError(e.message || 'Login failed.');
