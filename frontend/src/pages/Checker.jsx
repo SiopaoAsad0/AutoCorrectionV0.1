@@ -181,21 +181,49 @@ function StatPill({ label, value, color }) {
   );
 }
 
+const DRAFT_KEY = 'pnc_checker_draft';
+
+function loadDraft() {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Checker() {
   const MAX_INPUT_WORDS = 500;
-  const [text,              setText]              = useState('');
-  const [results,           setResults]           = useState([]);
-  const [analytics,         setAnalytics]         = useState(null);
-  const [language,          setLanguage]          = useState(null);
-  const [latencyMs,         setLatencyMs]         = useState(null);
+  const draft = loadDraft();
+  // Restored from sessionStorage when present, so navigating to another
+  // page (e.g. Profile) and back -- or the browser's own tab-switch
+  // remount cycle -- doesn't wipe whatever the user was already working
+  // on. Cleared on logout and on "Clear" so it never leaks between
+  // sessions or users on a shared browser.
+  const [text,              setText]              = useState(draft?.text ?? '');
+  const [results,           setResults]           = useState(draft?.results ?? []);
+  const [analytics,         setAnalytics]         = useState(draft?.analytics ?? null);
+  const [language,          setLanguage]          = useState(draft?.language ?? null);
+  const [latencyMs,         setLatencyMs]         = useState(draft?.latencyMs ?? null);
   const [loading,           setLoading]           = useState(false);
   const [error,             setError]             = useState(null);
   const [selectedWordIndex, setSelectedWordIndex] = useState(null);
   const [activeSuggestion,  setActiveSuggestion]  = useState(null);
-  const [grammarIssues,     setGrammarIssues]     = useState([]);
+  const [grammarIssues,     setGrammarIssues]     = useState(draft?.grammarIssues ?? []);
   const textareaRef = useRef(null);
   const mirrorRef   = useRef(null);
   const navigate    = useNavigate();
+
+  // Persist the draft on every change so it survives navigating away and
+  // coming back. sessionStorage (not localStorage) so it's scoped to this
+  // tab/session and doesn't linger indefinitely across unrelated visits.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+        text, results, analytics, language, latencyMs, grammarIssues,
+      }));
+    } catch { /* storage full or unavailable -- draft persistence is a convenience, not critical */ }
+  }, [text, results, analytics, language, latencyMs, grammarIssues]);
 
   const syncScroll = () => {
     if (textareaRef.current && mirrorRef.current) {
@@ -370,6 +398,7 @@ export default function Checker() {
     setText(''); setResults([]); setGrammarIssues([]);
     setAnalytics(null); setLanguage(null); setError(null);
     setSelectedWordIndex(null); setActiveSuggestion(null); setLatencyMs(null);
+    try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
   };
 
   const downloadCSV = () => {
