@@ -1,8 +1,8 @@
-import { apiFetch, setAuthToken } from './apiClient';
+import { apiFetch } from './apiClient';
 
-// Auth state lives in a bearer token (see apiClient.js), not a cookie.
-// isAuthenticated() still asks the server, since a locally-present token
-// could be expired or revoked.
+// Auth state now lives entirely in an httpOnly session cookie the browser
+// manages -- there is nothing for this code to read directly, so every
+// check is a real request to the server asking "is this session valid?"
 
 export async function isStudentAuthenticated() {
   const res = await apiFetch('/api/me');
@@ -16,10 +16,11 @@ export async function isAdminAuthenticated() {
 
 export async function studentLogout() {
   await apiFetch('/api/logout', { method: 'POST' });
-  setAuthToken(null);
+  // Clear the checker's in-progress draft so it can't leak to whoever
+  // logs in next on a shared browser.
+  try { sessionStorage.removeItem('pnc_checker_draft'); } catch { /* ignore */ }
 }
 
 export async function adminLogout() {
   await apiFetch('/api/admin/logout', { method: 'POST' });
-  setAuthToken(null);
 }
