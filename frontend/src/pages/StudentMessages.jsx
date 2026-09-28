@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '../utils/apiClient';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /* Same tokens as Landing / Checker / Navbar — lift to src/theme.js. */
 const T = {
@@ -52,18 +52,21 @@ export default function StudentMessages() {
   const [success,     setSuccess]     = useState(null);
   const navigate = useNavigate();
 
+  // Who is logged in comes from the server session, not a localStorage blob.
+  // The old check looked for `isLoggedIn`/`pnc_user` flags that login no
+  // longer sets, so it would have redirected every student back to /login.
   useEffect(() => {
-    const studentId = localStorage.getItem('pnc_user');
-    if (!studentId || localStorage.getItem('isLoggedIn') !== 'true') {
-      navigate('/login', { replace: true }); return;
-    }
-    const savedData = localStorage.getItem(`student_${studentId}`);
-    if (!savedData) { navigate('/login', { replace: true }); return; }
-    try {
-      const parsed = JSON.parse(savedData);
-      setStudent(parsed);
-      setEmail(parsed.email || '');
-    } catch { navigate('/login', { replace: true }); }
+    let cancelled = false;
+    apiFetch('/api/me')
+      .then(async (res) => {
+        if (!res.ok) { if (!cancelled) navigate('/login', { replace: true }); return; }
+        const me = await res.json();
+        if (cancelled) return;
+        setStudent({ ...me, id: me.student_id });
+        setEmail(me.email || '');
+      })
+      .catch(() => { if (!cancelled) navigate('/login', { replace: true }); });
+    return () => { cancelled = true; };
   }, [navigate]);
 
   const canFetch = useMemo(() => /\S+@\S+\.\S+/.test(email.trim()), [email]);
@@ -72,10 +75,7 @@ export default function StudentMessages() {
     if (!canFetch) { setItems([]); setLoading(false); return; }
     setError(null);
     try {
-      const res = await fetch(
-        `${API_BASE}/api/contact/messages?email=${encodeURIComponent(email.trim())}`,
-        { headers: { Accept: 'application/json' } }
-      );
+      const res = await apiFetch(`/api/contact/messages?email=${encodeURIComponent(email.trim())}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || `Could not load messages (${res.status})`);
       setItems(data.data || []);
@@ -100,17 +100,14 @@ export default function StudentMessages() {
     if (!/\S+@\S+\.\S+/.test(normalized)) {
       setError('Please enter a valid email before saving.'); return;
     }
-    const studentId = localStorage.getItem('pnc_user');
-    if (!studentId) return;
+    // The account's email now comes from the server (/api/me). This only
+    // switches which inbox is shown for the current visit; it is no longer
+    // written to localStorage.
     setSavingEmail(true); setError(null);
-    try {
-      const next = { ...student, email: normalized };
-      localStorage.setItem(`student_${studentId}`, JSON.stringify(next));
-      setStudent(next);
-      setSuccess('Email saved — your inbox now syncs with admin replies.');
-      setTimeout(() => setSuccess(null), 3500);
-    } catch { setError('Could not save email locally.'); }
-    finally { setSavingEmail(false); }
+    setStudent((s) => ({ ...s, email: normalized }));
+    setSuccess('Inbox updated — now showing replies for this email.');
+    setTimeout(() => setSuccess(null), 3500);
+    setSavingEmail(false);
   };
 
   const sendMessage = async (e) => {
@@ -124,9 +121,8 @@ export default function StudentMessages() {
     }
     setError(null); setSuccess(null); setSending(true);
     try {
-      const res = await fetch(`${API_BASE}/api/contact`, {
+      const res = await apiFetch('/api/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           name: student.name || student.id || 'Student',
           email: normalizedEmail,
