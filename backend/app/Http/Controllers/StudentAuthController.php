@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -64,15 +65,9 @@ class StudentAuthController extends Controller
 
     /**
      * POST /api/login
-     * Verifies credentials against the central database and issues a
-     * Sanctum personal access token (Bearer auth), rather than starting a
-     * server-side session. A session cookie can't be shared between the
-     * frontend (Vercel) and backend (Render) since they're on unrelated
-     * root domains -- the browser will never expose one domain's cookie
-     * to JavaScript running on the other, so cookie/session auth (and the
-     * CSRF-cookie flow it depends on) cannot work across this split. A
-     * bearer token sent explicitly in an Authorization header has no such
-     * restriction.
+     * Verifies credentials against the central database (not localStorage)
+     * and issues a Sanctum token, so the same account works from any
+     * browser or device.
      */
     public function login(Request $request): JsonResponse
     {
@@ -93,10 +88,15 @@ class StudentAuthController extends Controller
             return response()->json(['message' => 'Admin accounts must sign in on the admin login page.'], 403);
         }
 
-        $token = $user->createToken('spa-token')->plainTextToken;
+        // Server-side session, not a client-stored token: the browser
+        // receives an httpOnly session cookie it can't read or lose track
+        // of, and the server is the sole source of truth for who is
+        // logged in. Regenerating the session ID on login prevents
+        // session-fixation attacks.
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
 
         return response()->json([
-            'token' => $token,
             'user' => [
                 'id'         => $user->id,
                 'name'       => $user->name,
@@ -110,12 +110,15 @@ class StudentAuthController extends Controller
 
     /**
      * POST /api/logout
-     * Revokes only the token used to authenticate this request, so other
-     * devices/browsers the user is logged in on stay logged in.
+     * Properly destroys the server-side session (not just a client-side
+     * flag), so the session is invalid immediately, from every tab/device
+     * that held it -- not merely "forgotten" by this browser.
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out.']);
     }
@@ -145,14 +148,26 @@ class StudentAuthController extends Controller
     {
         $request->validate(['email' => ['required', 'email']]);
 
-        $status = Password::sendResetLink($request->only('email'));
+        $email = $request->input('email');
 
-        // Always return a generic success message regardless of whether the
-        // email exists, so this endpoint can't be used to enumerate which
-        // emails are registered.
+        // Sending via Gmail SMTP can take several seconds (TLS handshake,
+        // Render's outbound network, Gmail's own response time), and doing
+        // it inline made this endpoint look "stuck" on the frontend. The
+        // response below is generic regardless of outcome anyway, so
+        // nothing user-facing depends on waiting for the send to finish.
+        // afterResponse() runs it once the HTTP response has been sent,
+        // in the same PHP process -- no queue worker required.
+        dispatch(function () use ($email) {
+            Password::sendResetLink(['email' => $email]);
+        })->afterResponse();
+
+        // Always the same generic message, whether or not the email exists,
+        // so this endpoint can't be used to enumerate registered accounts.
+        // (This used to also return the broker's 'status' string, which
+        // differs between "sent" and "user not found" and leaked exactly
+        // that.)
         return response()->json([
             'message' => 'If that email is registered, a password reset link has been sent.',
-            'status' => $status,
         ]);
     }
 
