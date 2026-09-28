@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { apiFetch, getAuthToken, setAuthToken } from '../utils/apiClient';
+import { apiFetch } from '../utils/apiClient';
 
 /* Same manuscript tokens as AdminReports / Landing / Profile. */
 const T = {
@@ -109,12 +109,10 @@ export default function AdminUsers() {
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
-    if (!getAuthToken()) { navigate('/admin/login', { replace: true }); return; }
     setLoading(true); setError(null);
     try {
       const res = await apiFetch('/api/admin/users?per_page=100');
       if (res.status === 401 || res.status === 403) {
-        setAuthToken(null);
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -128,24 +126,12 @@ export default function AdminUsers() {
         createdAt: u.created_at || null, source: 'Database',
       }));
 
-      const localUsers = [];
-      for (const key of Object.keys(localStorage)) {
-        if (!key.startsWith('student_')) continue;
-        const studentId = key.slice('student_'.length);
-        try {
-          const raw = localStorage.getItem(key);
-          if (!raw) continue;
-          const student = JSON.parse(raw);
-          localUsers.push({
-            id: `local-${studentId}`, displayId: studentId,
-            name: student?.name || `${student?.firstName || ''} ${student?.lastName || ''}`.trim() || 'Unnamed student',
-            account: studentId, role: 'Student',
-            createdAt: null, source: 'Local signup',
-          });
-        } catch { /* skip malformed */ }
-      }
-
-      const merged = [...apiUsers, ...localUsers];
+      // Accounts now live in the central database, so the list comes from the
+      // API alone. This used to also merge in `student_*` entries scraped from
+      // the admin's own browser localStorage (the old client-only signup),
+      // which only ever showed whatever happened to be cached on that one
+      // machine and duplicated real accounts.
+      const merged = [...apiUsers];
       merged.sort((a, b) => String(a.name).localeCompare(String(b.name)));
       setItems(merged);
     } catch (e) {
