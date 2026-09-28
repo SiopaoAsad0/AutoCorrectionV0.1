@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '../utils/apiClient';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /* ────────────────────────────────────────────────────────────────────────
    Design tokens
@@ -154,9 +154,8 @@ export default function Landing() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/contact`, {
+      const res = await apiFetch('/api/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ name, email, message }),
       });
       const data = await res.json().catch(() => ({}));
