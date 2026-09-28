@@ -7,6 +7,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\SpellController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StudentAuthController;
+use App\Http\Controllers\PasswordOtpController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 /*
@@ -18,6 +19,14 @@ Route::post('/register', [StudentAuthController::class, 'register']);
 Route::post('/login', [StudentAuthController::class, 'login']);
 Route::post('/forgot-password', [StudentAuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [StudentAuthController::class, 'resetPassword']);
+
+// Password reset by emailed 6-digit code (OTP): send -> verify -> change password.
+// Throttled per IP on top of the per-email limits enforced in the controller.
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/password/otp/send',   [PasswordOtpController::class, 'send']);
+    Route::post('/password/otp/verify', [PasswordOtpController::class, 'verify']);
+    Route::post('/password/otp/reset',  [PasswordOtpController::class, 'reset']);
+});
 Route::middleware('auth:sanctum')->post('/logout', [StudentAuthController::class, 'logout']);
 Route::middleware('auth:sanctum')->get('/me', [StudentAuthController::class, 'me']);
 
