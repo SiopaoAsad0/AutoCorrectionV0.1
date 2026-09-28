@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { apiFetch, getAuthToken, setAuthToken } from '../utils/apiClient';
+import { apiFetch } from '../utils/apiClient';
 
 const T = {
   paper:      '#f2f3ec',
@@ -82,13 +82,11 @@ export default function AdminMessages() {
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
-    if (!getAuthToken()) { navigate('/admin/login', { replace: true }); return; }
     setError(null);
     setLoading(true);
     try {
       const res = await apiFetch('/api/admin/contact-messages');
       if (res.status === 401 || res.status === 403) {
-        setAuthToken(null);
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -124,7 +122,6 @@ export default function AdminMessages() {
         body: JSON.stringify({ admin_reply: body }),
       });
       if (res.status === 401 || res.status === 403) {
-        setAuthToken(null);
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -146,7 +143,6 @@ export default function AdminMessages() {
     try {
       await apiFetch('/api/admin/logout', { method: 'POST' });
     } catch { /* ignore */ }
-    setAuthToken(null);
     navigate('/admin/login', { replace: true });
   };
 
