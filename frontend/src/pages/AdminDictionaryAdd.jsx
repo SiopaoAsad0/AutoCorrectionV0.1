@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { apiFetch, getAuthToken, setAuthToken } from '../utils/apiClient';
+import { apiFetch } from '../utils/apiClient';
 
 const T = {
   paper:      '#f2f3ec',
@@ -88,7 +88,6 @@ export default function AdminDictionaryAdd() {
   const saveWord = async (e) => {
     e.preventDefault();
     setError(null); setSuccess(null);
-    if (!getAuthToken()) { navigate('/admin/login', { replace: true }); return; }
     if (!word.trim()) { setError('Word is required.'); return; }
 
     setSaving(true);
@@ -102,7 +101,6 @@ export default function AdminDictionaryAdd() {
         }),
       });
       if (res.status === 401 || res.status === 403) {
-        setAuthToken(null);
         navigate('/admin/login', { replace: true });
         return;
       }
