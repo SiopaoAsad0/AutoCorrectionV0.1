@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
 
@@ -37,6 +38,23 @@ class Handler extends ExceptionHandler
         // request was made.
         $this->renderable(function (AuthenticationException $e, $request) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
+        });
+
+        // Same issue as above, for validation failures (e.g. a wrong or
+        // expired OTP, an unregistered email). Laravel's default handling
+        // tries to flash the errors to the session and redirect back for
+        // any request it doesn't detect as JSON, which crashes with
+        // "Session store not set on request" here -- there's no session
+        // middleware active for requests Sanctum doesn't recognize as
+        // coming from the frontend, and no page to redirect back to
+        // either way, since this is API-only. Always return the errors as
+        // JSON instead, in the { message, errors } shape the frontend
+        // already expects.
+        $this->renderable(function (ValidationException $e, $request) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], $e->status);
         });
     }
 }
