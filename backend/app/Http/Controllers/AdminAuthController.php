@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -12,13 +13,9 @@ class AdminAuthController extends Controller
 {
     /**
      * POST /api/admin/login
-     * Issues a Sanctum personal access token (Bearer auth) rather than
-     * starting a server-side session. A session cookie can't be shared
-     * between the frontend (Vercel) and backend (Render) since they're on
-     * unrelated root domains -- the browser never exposes one domain's
-     * cookie to JS running on the other -- so cookie/session auth cannot
-     * work across this split. See StudentAuthController::login() for the
-     * same change on the student side.
+     * Uses a server-side session cookie, the same as the student login.
+     * The frontend proxies /api and /sanctum through Vercel, so the
+     * session cookie and CSRF token work as a single site.
      */
     public function login(Request $request): JsonResponse
     {
@@ -43,10 +40,10 @@ class AdminAuthController extends Controller
             return response()->json(['message' => 'This account is not an administrator.'], 403);
         }
 
-        $token = $user->createToken('admin-spa-token')->plainTextToken;
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
 
         return response()->json([
-            'token' => $token,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -58,11 +55,13 @@ class AdminAuthController extends Controller
 
     /**
      * POST /api/admin/logout
-     * Revokes only the token used to authenticate this request.
+     * Destroys the server-side session.
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out.']);
     }
