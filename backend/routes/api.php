@@ -8,7 +8,6 @@ use App\Http\Controllers\SpellController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StudentAuthController;
 use App\Http\Controllers\PasswordOtpController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 /*
 |--------------------------------------------------------------------------
@@ -39,43 +38,6 @@ Route::post('/contact', [ContactController::class, 'store']);
 Route::get('/contact/messages', [ContactController::class, 'index']);
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 
-Route::get('/debug/dictionary-check', function (Request $request) {
-    $word = $request->query('word', 'spelling');
-    $rows = \App\Models\Dictionary::where('word', $word)->get();
-    $total = \App\Models\Dictionary::count();
-    return response()->json([
-        'word_queried' => $word,
-        'found' => $rows->count(),
-        'rows' => $rows,
-        'total_dictionary_rows' => $total,
-    ]);
-});
-
-Route::get('/debug/filesystem-check', function () {
-    $basePath = base_path();
-    $bundled = base_path('database/seeders/data/lexicons');
-    $englishFile = base_path('database/seeders/data/lexicons/english/google-10000-english.txt');
-
-    $listSeedersDir = @scandir(base_path('database/seeders'));
-    $listDataDir = @scandir(base_path('database/seeders/data'));
-    $listLexiconsDir = @scandir($bundled);
-
-    return response()->json([
-        'base_path' => $basePath,
-        'bundled_path_checked' => $bundled,
-        'bundled_is_dir' => is_dir($bundled),
-        'english_file_path_checked' => $englishFile,
-        'english_file_exists' => file_exists($englishFile),
-        'english_file_readable' => is_readable($englishFile),
-        'listing_of_seeders_dir' => $listSeedersDir,
-        'listing_of_seeders_data_dir' => $listDataDir,
-        'listing_of_lexicons_dir' => $listLexiconsDir,
-    ]);
-});
-
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::post('/logout', [AdminAuthController::class, 'logout']);
     Route::get('/me', [AdminAuthController::class, 'me']);
