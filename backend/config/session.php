@@ -168,7 +168,18 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    // Same issue as sanctum.php's stateful domains: SESSION_SECURE_COOKIE
+    // was set on Render but left blank, and env('X') with no default
+    // returns null for a blank value (not true/false), which is not
+    // reliably truthy for the Secure flag. Cross-domain cookies require
+    // SameSite=None, and browsers silently drop SameSite=None cookies
+    // that aren't marked Secure -- so a null here breaks every session
+    // cookie the same way the blank stateful-domains value broke login.
+    // This backend is always served over HTTPS in production, so default
+    // to true unless the env var explicitly says otherwise.
+    'secure' => trim((string) env('SESSION_SECURE_COOKIE', '')) !== ''
+        ? filter_var(env('SESSION_SECURE_COOKIE'), FILTER_VALIDATE_BOOLEAN)
+        : true,
 
     /*
     |--------------------------------------------------------------------------
@@ -209,6 +220,6 @@ return [
     |
     */
 
-    'partitioned' => true,
+    'partitioned' => false,
 
 ];
