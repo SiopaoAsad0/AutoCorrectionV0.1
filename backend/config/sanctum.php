@@ -15,11 +15,23 @@ return [
     |
     */
 
-    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
-        Sanctum::currentApplicationUrlWithPort()
-    ))),
+    // Falls back to the production frontend domain when
+    // SANCTUM_STATEFUL_DOMAINS is unset OR set to an empty string on
+    // Render -- env('X', $default) only uses $default when the var is
+    // completely absent, not when it exists but is blank, which is
+    // exactly what caused login to fail with "Session store not set on
+    // request": Sanctum never recognized requests from the frontend as
+    // stateful, so it never started a session for them. The env var
+    // still takes priority whenever it actually holds a non-empty value,
+    // so this doesn't prevent using it for a different domain later.
+    'stateful' => array_values(array_filter(explode(',', trim(env('SANCTUM_STATEFUL_DOMAINS', '')) !== ''
+        ? env('SANCTUM_STATEFUL_DOMAINS')
+        : sprintf(
+            '%s,%s,%s',
+            'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
+            'auto-correction-v0-1-i6yy.vercel.app',
+            Sanctum::currentApplicationUrlWithPort()
+        )))),
 
     /*
     |--------------------------------------------------------------------------
