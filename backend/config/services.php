@@ -31,4 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Password-reset OTP emails over HTTPS (Render's free plan blocks SMTP).
+    'brevo' => [
+        'key' => env('BREVO_API_KEY'),
+        'sender' => env('BREVO_SENDER_EMAIL'),
+    ],
+
 ];
