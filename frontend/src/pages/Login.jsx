@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { apiFetch } from '../utils/apiClient';
-import { isStudentAuthenticated } from '../utils/auth';
+import { isStudentAuthenticated, markStudentLoggedIn } from '../utils/auth';
 
 const T = {
   paper:      '#f2f3ec',
@@ -102,6 +102,12 @@ export default function Login() {
          Checker. That means the mobile back button / swipe-back gesture
          goes straight to Home instead of bouncing back to the sign-in
          form — while the session itself (localStorage) is untouched. */
+
+      // The server just confirmed this login, so tell the auth check to
+      // trust it. Without this, ProtectedRoute can fire its own /api/me
+      // check right away, and a slow, stale or failed response sends the
+      // user straight back to /login.
+      markStudentLoggedIn();
       navigate('/checker', { replace: true });
     } catch {
       setError('Could not reach the server. Please check your connection and try again.');
