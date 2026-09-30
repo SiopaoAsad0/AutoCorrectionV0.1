@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -134,10 +135,28 @@ class PasswordOtpController extends Controller
             ."your password will not change.";
 
         try {
-            Mail::raw($body, function ($message) use ($user) {
-                $message->to($user->email, $user->name)
-                    ->subject('Your PNC Spell Checker password reset code');
-            });
+            $subject = 'Your PNC Spell Checker password reset code';
+
+            if (config('services.brevo.key')) {
+                // HTTPS API: works on Render's free plan, which blocks SMTP ports.
+                $response = Http::withHeaders(['api-key' => config('services.brevo.key')])
+                    ->timeout(15)
+                    ->post('https://api.brevo.com/v3/smtp/email', [
+                        'sender'      => ['name' => 'PNC Spell Checker', 'email' => config('services.brevo.sender')],
+                        'to'          => [['email' => $user->email, 'name' => $user->name]],
+                        'subject'     => $subject,
+                        'textContent' => $body,
+                    ]);
+
+                if ($response->failed()) {
+                    throw new \RuntimeException('Brevo '.$response->status().': '.$response->body());
+                }
+            } else {
+                // Local development: falls back to the MAIL_* settings (e.g. Mailpit).
+                Mail::raw($body, function ($message) use ($user, $subject) {
+                    $message->to($user->email, $user->name)->subject($subject);
+                });
+            }
         } catch (\Throwable $e) {
             // Sent inline (not after the response) so a delivery failure is
             // reported to the user instead of leaving them waiting.
