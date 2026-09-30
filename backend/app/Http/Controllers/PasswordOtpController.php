@@ -141,6 +141,8 @@ class PasswordOtpController extends Controller
                 // HTTPS API: works on Render's free plan, which blocks SMTP ports.
                 $response = Http::withHeaders(['api-key' => config('services.brevo.key')])
                     ->timeout(15)
+                    ->acceptJson()
+                    ->withoutRedirecting()
                     ->post('https://api.brevo.com/v3/smtp/email', [
                         'sender'      => ['name' => 'PNC Spell Checker', 'email' => config('services.brevo.sender')],
                         'to'          => [['email' => $user->email, 'name' => $user->name]],
@@ -148,8 +150,13 @@ class PasswordOtpController extends Controller
                         'textContent' => $body,
                     ]);
 
-                if ($response->failed()) {
-                    throw new \RuntimeException('Brevo '.$response->status().': '.$response->body());
+                // Any non-2xx counts as a failure, including redirects.
+                if (! $response->successful()) {
+                    throw new \RuntimeException(
+                        'Brevo '.$response->status()
+                        .' location='.$response->header('Location')
+                        .' body='.mb_substr($response->body(), 0, 300)
+                    );
                 }
             } else {
                 // Local development: falls back to the MAIL_* settings (e.g. Mailpit).
