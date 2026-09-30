@@ -32,6 +32,9 @@ function makeCheck(path) {
   };
 
   check.clear = () => { okUntil = 0; pending = null; };
+  // Called right after a successful login: the server just confirmed the
+  // session, so trust it for a while and drop any stale in-flight check.
+  check.markOk = () => { okUntil = Date.now() + CACHE_MS; pending = null; };
   return check;
 }
 
@@ -44,6 +47,10 @@ export function isStudentAuthenticated() {
 
 export function isAdminAuthenticated() {
   return checkAdmin();
+}
+
+export function markStudentLoggedIn() {
+  checkStudent.markOk();
 }
 
 export async function studentLogout() {
