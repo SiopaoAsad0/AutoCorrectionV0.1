@@ -66,13 +66,15 @@ class ReportController extends Controller
         ->limit(20)
         ->get();
 
-        $algorithmComparison = SpellCheckLog::selectRaw('
+        // PostgreSQL notes: algorithm_agreement is a boolean, so it is used
+        // directly (no "= 1"), and string literals use single quotes.
+        $algorithmComparison = SpellCheckLog::selectRaw("
             AVG(levenshtein_distance) as avg_lev_distance,
             AVG(jaro_winkler_similarity) as avg_jw_similarity,
-            SUM(CASE WHEN algorithm_agreement = 1 THEN 1 ELSE 0 END) as agreements,
+            SUM(CASE WHEN algorithm_agreement THEN 1 ELSE 0 END) as agreements,
             COUNT(*) as total,
-            AVG(CASE WHEN preferred_algorithm = "levenshtein" THEN 1 ELSE 0 END) as lev_preferred_rate
-        ')
+            AVG(CASE WHEN preferred_algorithm = 'levenshtein' THEN 1 ELSE 0 END) as lev_preferred_rate
+        ")
         ->whereNotNull('levenshtein_distance')
         ->first();
 
@@ -265,7 +267,7 @@ class ReportController extends Controller
             AVG(levenshtein_distance) as avg_lev,
             AVG(jaro_winkler_similarity) as avg_jw,
             COUNT(*) as occurrences,
-            SUM(CASE WHEN algorithm_agreement = 1 THEN 1 ELSE 0 END) as agreements
+            SUM(CASE WHEN algorithm_agreement THEN 1 ELSE 0 END) as agreements
         ')
         ->whereNotNull('misspelled_word')
         ->whereNotNull('suggested_word')
