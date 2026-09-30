@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://autocorrectionv0-1.onrender.com/api/:path*" },
-    { "source": "/sanctum/:path*", "destination": "https://autocorrectionv0-1.onrender.com/sanctum/:path*" },
+    { "source": "/api/:path*", "destination": "https://autocorrectionv0-1-1.onrender.com/api/:path*" },
+    { "source": "/sanctum/:path*", "destination": "https://autocorrectionv0-1-1.onrender.com/sanctum/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
