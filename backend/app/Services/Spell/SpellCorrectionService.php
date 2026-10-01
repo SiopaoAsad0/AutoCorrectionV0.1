@@ -448,6 +448,7 @@ class SpellCorrectionService
             'words' => $wordResults,
             'analytics' => $analytics,
             'language' => $detectedLanguage,
+            'language_label' => $this->languageLabel($detectedLanguage),
             'learning_candidates' => $learningCandidates,
             'corrected_text' => $correctedText,
         ];
@@ -853,9 +854,21 @@ class SpellCorrectionService
     {
         $english = 0;
         $tagalog = 0;
+        $prefixes = config('spelling.morphology_prefixes', ['maka', 'maki', 'mag', 'pag', 'nag', 'ma', 'ka', 'i', 'um']);
 
         foreach ($tokens as $token) {
-            $entry = $this->dictionary->find($token['normalized']);
+            $normalized = $token['normalized'];
+            $entry = $this->dictionary->find($normalized);
+
+            // Taglish constructions (nag-apply, mag-email, i-stop) are handled by the
+            // hyphen rule. Their prefix is Tagalog, so they must not turn an otherwise
+            // Tagalog paragraph into "Tagalog, English". Only standalone English words
+            // (school, company, breakfast) count as English.
+            if ($this->isTaglishConstruction($normalized, $entry, $prefixes)) {
+                $tagalog++;
+                continue;
+            }
+
             if ($entry?->language === 'english') {
                 $english++;
             } elseif ($entry?->language === 'tagalog') {
@@ -868,6 +881,37 @@ class SpellCorrectionService
         }
 
         return $tagalog > $english ? 'tagalog' : 'english';
+    }
+
+    /**
+     * Filipino verb prefix + English root (nag-apply, mag-email, i-stop), whether or not
+     * the user typed the hyphen correctly.
+     *
+     * @param  array<int, string>  $prefixes
+     */
+    private function isTaglishConstruction(string $normalized, mixed $entry, array $prefixes): bool
+    {
+        $morph = $this->segmentMorphology($normalized, $prefixes);
+        if (! HyphenRule::appliesTo($morph['prefix'])) {
+            return false;
+        }
+
+        // A plain English word that only starts like a prefix (ideal, icon, image)
+        // is a real English word, not a construction.
+        if (! str_contains($normalized, '-') && $entry !== null) {
+            return false;
+        }
+
+        return $this->isEnglishRoot($morph['root'], $this->dictionary->getCandidates($morph['root'], 2, 25));
+    }
+
+    private function languageLabel(string $hint): string
+    {
+        return match ($hint) {
+            'taglish' => 'Tagalog, English',
+            'tagalog' => 'Tagalog',
+            default => 'English',
+        };
     }
 
     private function selectInformalNormalizationTarget(string $normalized, string $sentenceLanguage): ?string
