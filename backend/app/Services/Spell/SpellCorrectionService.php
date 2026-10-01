@@ -197,6 +197,30 @@ class SpellCorrectionService
             }
 
             $morphology = $this->segmentMorphology($normalized, $morphologyPrefixes);
+
+            // Prefix + English root already spelled per the hyphen rule -> correct.
+            $morphPrefix = $morphology['prefix'];
+            $morphRoot = $morphology['root'];
+            if (
+                ! $isPhraseHead
+                && HyphenRule::appliesTo($morphPrefix)
+                && ($morphRootEntry = $this->dictionary->find($morphRoot)) !== null
+                && $morphRootEntry->language === 'english'
+                && HyphenRule::join($morphPrefix, $morphRoot) === $normalized
+            ) {
+                $wordResults[] = [
+                    'word' => $raw,
+                    'normalized' => $normalized,
+                    'status' => 'correct',
+                    'pos' => $morphRootEntry->pos ?? $this->posTagging->tag($morphRoot, null),
+                    'suggestions' => [],
+                    'distance' => null,
+                    'language' => 'taglish',
+                    'morphology' => $morphology,
+                ];
+                continue;
+            }
+
             $candidates = $this->dictionary->getCandidates($normalized, $lengthTolerance, $maxSuggestions * 3);
             $scored = [];
             $seenWords = [];
@@ -693,14 +717,20 @@ class SpellCorrectionService
                 continue;
             }
 
-            $rebuilt = $prefix.$candidateRoot;
+            // Hyphen rule applies to English roots only (see HyphenRule).
+            $rootLanguage = $candidate['language'] ?? $this->dictionary->find($candidateRoot)?->language;
+            $isEnglishRoot = $rootLanguage === 'english';
+            $rebuilt = $isEnglishRoot
+                ? HyphenRule::join($prefix, $candidateRoot)
+                : $prefix.$candidateRoot;
             if (! $this->isCandidateAcceptable($source, $rebuilt, $frequency, $minFrequencyCutoff)) {
                 continue;
             }
             $candidatePos = $candidate['pos'] ?? $this->posTagging->tag($rebuilt, null);
             $contextScore = $this->contextAwareness->scoreCandidate($tokens, $index, $rebuilt, $candidatePos);
             $semanticScore = $this->semanticCompatibilityScore($tokens, $index, $rebuilt);
-            $distance = round($prefixDistance + $rootDistance, 2);
+            $hyphenCost = $isEnglishRoot ? HyphenRule::editCost($source, $rebuilt) : 0.0;
+            $distance = round($prefixDistance + $rootDistance + $hyphenCost, 2);
             $rankScore = $distance - $contextWeight * $contextScore - 0.7 * $semanticScore;
 
             $out[] = [
