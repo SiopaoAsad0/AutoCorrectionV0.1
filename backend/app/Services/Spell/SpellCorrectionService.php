@@ -204,15 +204,15 @@ class SpellCorrectionService
             if (
                 ! $isPhraseHead
                 && HyphenRule::appliesTo($morphPrefix)
-                && ($morphRootEntry = $this->dictionary->find($morphRoot)) !== null
-                && $morphRootEntry->language === 'english'
                 && HyphenRule::join($morphPrefix, $morphRoot) === $normalized
+                && $this->isEnglishRoot($morphRoot, $this->dictionary->getCandidates($morphRoot, 2, 25))
             ) {
+                $morphRootEntry = $this->dictionary->find($morphRoot);
                 $wordResults[] = [
                     'word' => $raw,
                     'normalized' => $normalized,
                     'status' => 'correct',
-                    'pos' => $morphRootEntry->pos ?? $this->posTagging->tag($morphRoot, null),
+                    'pos' => $morphRootEntry?->pos ?? $this->posTagging->tag($morphRoot, null),
                     'suggestions' => [],
                     'distance' => null,
                     'language' => 'taglish',
@@ -718,8 +718,7 @@ class SpellCorrectionService
             }
 
             // Hyphen rule applies to English roots only (see HyphenRule).
-            $rootLanguage = $candidate['language'] ?? $this->dictionary->find($candidateRoot)?->language;
-            $isEnglishRoot = $rootLanguage === 'english';
+            $isEnglishRoot = $this->isEnglishRoot(mb_strtolower($candidateRoot), $rootCandidates);
             $rebuilt = $isEnglishRoot
                 ? HyphenRule::join($prefix, $candidateRoot)
                 : $prefix.$candidateRoot;
@@ -750,6 +749,25 @@ class SpellCorrectionService
         }
 
         return $out;
+    }
+
+    /**
+     * True when the word exists in the dictionary as English. The dictionary can hold
+     * several rows for the same word (e.g. one tagged english, one tagged otherwise),
+     * so every row is checked, not just the first.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     */
+    private function isEnglishRoot(string $root, array $rows): bool
+    {
+        $root = mb_strtolower($root);
+        foreach ($rows as $row) {
+            if (mb_strtolower((string) ($row['word'] ?? '')) === $root && ($row['language'] ?? null) === 'english') {
+                return true;
+            }
+        }
+
+        return $this->dictionary->find($root)?->language === 'english';
     }
 
     /**
