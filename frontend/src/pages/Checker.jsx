@@ -183,6 +183,14 @@ function StatPill({ label, value, color }) {
 
 const DRAFT_KEY = 'pnc_checker_draft';
 
+// The backend sends 'taglish' when a paragraph genuinely contains both
+// languages; show it as the two languages instead.
+const LANGUAGE_LABELS = {
+  tagalog: 'Tagalog',
+  english: 'English',
+  taglish: 'Tagalog, English',
+};
+
 function loadDraft() {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
@@ -647,7 +655,7 @@ export default function Checker() {
                         <StatPill label="Unknown"   value={sc.unknown ?? sc.misspelled ?? 0} color={T.red} />
                       </div>
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: T.inkSoft, paddingTop: 10, borderTop: `1px solid ${T.hairline}` }}>
-                        <span>Language: <strong style={{ color: T.ink }}>{language || analytics.language || '—'}</strong></span>
+                        <span>Language: <strong style={{ color: T.ink }}>{LANGUAGE_LABELS[language || analytics.language] ?? (language || analytics.language || '—')}</strong></span>
                         <span>Correction rate: <strong style={{ color: T.ink }}>{(analytics.correction_rate * 100).toFixed(1)}%</strong></span>
                         {typeof analytics.word_error_rate === 'number' && (
                           <span>WER: <strong style={{ color: T.ink }}>{(analytics.word_error_rate * 100).toFixed(1)}%</strong></span>
