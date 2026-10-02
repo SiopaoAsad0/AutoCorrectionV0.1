@@ -300,7 +300,7 @@ export default function Checker() {
       setResults(data.words || []);
       setGrammarIssues(data.grammar_issues || []);
       setAnalytics(data.analytics || null);
-      setLanguage(data.language || null);
+      setLanguage(data.language_label || data.language || null);
       setLatencyMs(data.processing_time_ms ?? null);
     } catch (err) {
       setError(err.message || 'Analysis failed.');
