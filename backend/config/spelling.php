@@ -11,7 +11,7 @@ return [
     'auto_learn_usage_threshold' => (int) env('SPELLING_AUTO_LEARN_USAGE_THRESHOLD', 3),
     'max_output_words' => (int) env('SPELLING_MAX_OUTPUT_WORDS', 500),
     'split_min_confidence' => (float) env('SPELLING_SPLIT_MIN_CONFIDENCE', 0.45),
-    'morphology_prefixes' => ['maka', 'maki', 'mag', 'pag', 'nag', 'ma', 'ka', 'i', 'um'],
+    'morphology_prefixes' => ['maka', 'maki', 'mag', 'pag', 'nag', 'na', 'ma', 'ka', 'i', 'um'],
     /** Multiplier for ContextAwarenessService score when ranking (higher = more sentence-context influence). */
     'context_weight' => (float) env('SPELLING_CONTEXT_WEIGHT', 1.35),
     'languages' => ['english', 'tagalog', 'taglish'],
@@ -297,11 +297,20 @@ return [
         'slmat' => 'salamat',
         'complet' => 'complete',
         'complte' => 'complete',
+        'mananood' => 'manonood',
+        'mnonood' => 'manonood',
+        'sbi' => 'sabi',
+        'tas' => 'tapos',
+        'trabao' => 'trabaho',
+        'bahe' => 'biyahe',
+        'kkain' => 'kakain',
+        'kailngan' => 'kailangan',
+        'emial' => 'email',
     ],
     'force_normalize_lexemes' => [
         'diko', 'dto', 'kc', 'ung', 'sakanila', 'samin', 'goodmorning',
         'dont', 'cant', 'wont', 'im', 'ive', 'ill', 'id', 'youre', 'theyre', 'maam',
-        'sya',
+        'sya', 'tas',
     ],
     'preserve_standard_forms' => [
         'nagloloko',
@@ -373,7 +382,7 @@ return [
         'drip', 'delulu', 'nocap', 'lowkey', 'highkey', 'brainrot', 'cap', 'based', 'cooked',
         'sus', 'stan', 'vibe', 'vibing', 'yeet', 'flex', 'itsgiving', 'iykyk', 'fyp', 'mewing', 'mid',
         'simp', 'cringe', 'goated', 'lit', 'sheesh', 'unc', 'ohio',
-        'manonood', 'nakauwi', 'namiss',
+        'manonood', 'nakauwi', 'namiss', 'nakarating', 'honestly', 'mispelled',
     ],
 
     /*
@@ -427,6 +436,11 @@ return [
     */
     'edit_costs' => [
         'insert' => 1.0,
+        // Re-adding a dropped vowel (sya -> siya, ganto -> ganito) is cheaper than other inserts.
+        // Set to 1.0 to turn this off.
+        'insert_vowel' => (float) env('SPELLING_VOWEL_INSERT_COST', 0.5),
+        // Swapping two neighbouring letters (emial -> email, teh -> the) counts as one edit.
+        'transpose' => (float) env('SPELLING_TRANSPOSE_COST', 0.7),
         'delete' => 1.0,
         'substitute' => 1.0,
     ],
