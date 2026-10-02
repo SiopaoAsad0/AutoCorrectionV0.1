@@ -14,7 +14,7 @@ namespace App\Services\Spell;
 class HyphenRule
 {
     /** Prefixes this rule applies to (verb-forming prefixes). */
-    private const PREFIXES = ['mag', 'nag', 'pag', 'maka', 'maki', 'i'];
+    private const PREFIXES = ['mag', 'nag', 'pag', 'maka', 'maki', 'na', 'i'];
 
     public static function appliesTo(?string $prefix): bool
     {
