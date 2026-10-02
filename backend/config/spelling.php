@@ -383,7 +383,7 @@ return [
         'drip', 'delulu', 'nocap', 'lowkey', 'highkey', 'brainrot', 'cap', 'based', 'cooked',
         'sus', 'stan', 'vibe', 'vibing', 'yeet', 'flex', 'itsgiving', 'iykyk', 'fyp', 'mewing', 'mid',
         'simp', 'cringe', 'goated', 'lit', 'sheesh', 'unc', 'ohio',
-        'manonood', 'nakauwi', 'namiss', 'nakarating', 'honestly', 'mispelled', 'sinabihan',
+        'manonood', 'nakauwi', 'namiss', 'nakarating', 'honestly', 'mispelled', 'sinabihan', 'hurry',
     ],
 
     /*
