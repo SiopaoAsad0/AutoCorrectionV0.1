@@ -306,11 +306,12 @@ return [
         'kkain' => 'kakain',
         'kailngan' => 'kailangan',
         'emial' => 'email',
+        'syang' => 'siyang',
     ],
     'force_normalize_lexemes' => [
         'diko', 'dto', 'kc', 'ung', 'sakanila', 'samin', 'goodmorning',
         'dont', 'cant', 'wont', 'im', 'ive', 'ill', 'id', 'youre', 'theyre', 'maam',
-        'sya', 'tas',
+        'sya', 'tas', 'syang',
     ],
     'preserve_standard_forms' => [
         'nagloloko',
@@ -382,7 +383,17 @@ return [
         'drip', 'delulu', 'nocap', 'lowkey', 'highkey', 'brainrot', 'cap', 'based', 'cooked',
         'sus', 'stan', 'vibe', 'vibing', 'yeet', 'flex', 'itsgiving', 'iykyk', 'fyp', 'mewing', 'mid',
         'simp', 'cringe', 'goated', 'lit', 'sheesh', 'unc', 'ohio',
-        'manonood', 'nakauwi', 'namiss', 'nakarating', 'honestly', 'mispelled',
+        'manonood', 'nakauwi', 'namiss', 'nakarating', 'honestly', 'mispelled', 'sinabihan',
+    ],
+
+    /*
+    | English roots that may take Filipino prefixes (nag-apply, mag-tetext, na-miss, i-resend)
+    | even when the dictionary doesn't have them yet. Add a root here to make its constructions
+    | count as correct.
+    */
+    'extra_english_roots' => [
+        'resend', 'text', 'meeting', 'miss', 'save', 'email', 'apply', 'open', 'wash', 'wish',
+        'stop', 'remind', 'click', 'update', 'login', 'compute',
     ],
 
     /*
