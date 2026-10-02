@@ -88,6 +88,20 @@ class SpellCorrectionService
             // even when the source token exists in the dictionary.
             $contextualTarget = $this->selectInformalNormalizationTarget($normalized, $sentenceLanguageHint);
             $directSingleTarget = $contextualTarget ?? ($directCorrections[$normalized] ?? null);
+
+            // Linker -ng on a word that has a direct correction (syang -> siyang, tlgang -> talagang):
+            // correct the stem, then re-attach the linker after a vowel.
+            if ($directSingleTarget === null && mb_strlen($normalized) > 3 && str_ends_with($normalized, 'ng')) {
+                $linkerStemTarget = $directCorrections[mb_substr($normalized, 0, -2)] ?? null;
+                if (
+                    is_string($linkerStemTarget)
+                    && $linkerStemTarget !== ''
+                    && ! str_contains($linkerStemTarget, ' ')
+                    && preg_match('/[aeiou]$/u', $linkerStemTarget) === 1
+                ) {
+                    $directSingleTarget = $linkerStemTarget.'ng';
+                }
+            }
             if (
                 ! $isPhraseHead
                 && is_string($directSingleTarget)
@@ -804,7 +818,14 @@ class SpellCorrectionService
      */
     private function isEnglishRoot(string $root): bool
     {
-        return $this->dictionary->hasLanguage(mb_strtolower($root), 'english');
+        $root = mb_strtolower($root);
+
+        // Roots the dictionary doesn't have yet but that should still form Taglish constructions.
+        if (in_array($root, (array) config('spelling.extra_english_roots', []), true)) {
+            return true;
+        }
+
+        return $this->dictionary->hasLanguage($root, 'english');
     }
 
     /**
