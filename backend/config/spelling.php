@@ -287,10 +287,21 @@ return [
         'grbe' => 'grabe',
         'actvty' => 'activity',
         'net' => 'internet',
+
+        // Feedback round
+        'sya' => 'siya',
+        'ganto' => 'ganito',
+        'gnito' => 'ganito',
+        'salmat' => 'salamat',
+        'salamt' => 'salamat',
+        'slmat' => 'salamat',
+        'complet' => 'complete',
+        'complte' => 'complete',
     ],
     'force_normalize_lexemes' => [
         'diko', 'dto', 'kc', 'ung', 'sakanila', 'samin', 'goodmorning',
         'dont', 'cant', 'wont', 'im', 'ive', 'ill', 'id', 'youre', 'theyre', 'maam',
+        'sya',
     ],
     'preserve_standard_forms' => [
         'nagloloko',
@@ -362,6 +373,7 @@ return [
         'drip', 'delulu', 'nocap', 'lowkey', 'highkey', 'brainrot', 'cap', 'based', 'cooked',
         'sus', 'stan', 'vibe', 'vibing', 'yeet', 'flex', 'itsgiving', 'iykyk', 'fyp', 'mewing', 'mid',
         'simp', 'cringe', 'goated', 'lit', 'sheesh', 'unc', 'ohio',
+        'manonood', 'nakauwi', 'namiss',
     ],
 
     /*
