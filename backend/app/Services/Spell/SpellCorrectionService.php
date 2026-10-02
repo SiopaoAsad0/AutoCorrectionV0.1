@@ -36,7 +36,8 @@ class SpellCorrectionService
         $directCorrections = config('spelling.direct_corrections', []);
         $contextWeight = (float) config('spelling.context_weight', 1.35);
         $contractionExpansions = config('spelling.contraction_expansions', []);
-        $sentenceLanguageHint = $this->detectSentenceLanguageHint($tokens);
+        $languageInfo = $this->detectSentenceLanguage($tokens);
+        $sentenceLanguageHint = $languageInfo['hint'];
 
         $spanAt = $this->findMultiWordDirectSpans($tokens, $directCorrections);
 
@@ -198,25 +199,53 @@ class SpellCorrectionService
 
             $morphology = $this->segmentMorphology($normalized, $morphologyPrefixes);
 
-            // Prefix + English root already spelled per the hyphen rule -> correct.
-            $morphPrefix = $morphology['prefix'];
-            $morphRoot = $morphology['root'];
-            if (
-                ! $isPhraseHead
-                && HyphenRule::appliesTo($morphPrefix)
-                && HyphenRule::join($morphPrefix, $morphRoot) === $normalized
-                && $this->isEnglishRoot($morphRoot)
-            ) {
-                $morphRootEntry = $this->dictionary->find($morphRoot);
+            // Taglish construction (Filipino prefix + English root: nag-apply, mag-tetext, na-miss,
+            // i-resend). Correct when already spelled per the hyphen rule, otherwise suggest the
+            // canonical spelling. The generic candidate search is skipped on purpose so unrelated
+            // look-alike words don't compete with the construction.
+            $construction = $isPhraseHead ? null : $this->resolveTaglishConstruction($morphology);
+            if ($construction !== null) {
+                if ($construction['canonical'] === $normalized) {
+                    $wordResults[] = [
+                        'word' => $raw,
+                        'normalized' => $normalized,
+                        'status' => 'correct',
+                        'pos' => $this->posTagging->tag($normalized, null),
+                        'suggestions' => [],
+                        'distance' => null,
+                        'language' => 'taglish',
+                        'morphology' => $morphology,
+                        'taglish_construction' => true,
+                    ];
+                    continue;
+                }
+
+                $constructionSuggestions = [];
+                foreach (array_merge([$construction['canonical']], $construction['alternatives']) as $rank => $form) {
+                    if ($form === $normalized) {
+                        continue;
+                    }
+                    $formPos = $this->posTagging->tag($form, null);
+                    $constructionSuggestions[] = [
+                        'word' => $form,
+                        'distance' => round($this->levenshtein->distance($normalized, $form), 2),
+                        'pos' => $formPos,
+                        'frequency' => 1000,
+                        'context_score' => $this->contextAwareness->scoreCandidate($tokens, $i, $form, $formPos),
+                        'confidence' => $rank === 0 ? 0.9 : 0.7,
+                        'error_breakdown' => $this->levenshtein->editBreakdown($normalized, $form),
+                    ];
+                }
                 $wordResults[] = [
                     'word' => $raw,
                     'normalized' => $normalized,
-                    'status' => 'correct',
-                    'pos' => $morphRootEntry?->pos ?? $this->posTagging->tag($morphRoot, null),
-                    'suggestions' => [],
-                    'distance' => null,
+                    'status' => 'suggested',
+                    'pos' => $this->posTagging->tag($normalized, null),
+                    'suggestions' => $constructionSuggestions,
+                    'distance' => $constructionSuggestions[0]['distance'] ?? null,
                     'language' => 'taglish',
                     'morphology' => $morphology,
+                    'taglish_construction' => true,
                 ];
                 continue;
             }
@@ -454,7 +483,7 @@ class SpellCorrectionService
             'words' => $wordResults,
             'analytics' => $analytics,
             'language' => $detectedLanguage,
-            'language_label' => $this->languageLabel($detectedLanguage),
+            'language_label' => $this->languageLabel($detectedLanguage, $languageInfo['constructions']),
             'learning_candidates' => $learningCandidates,
             'corrected_text' => $correctedText,
         ];
@@ -857,22 +886,27 @@ class SpellCorrectionService
     /**
      * @param  array<int, array{raw: string, normalized: string}>  $tokens
      */
-    private function detectSentenceLanguageHint(array $tokens): string
+    /**
+     * @param  array<int, array{raw: string, normalized: string}>  $tokens
+     * @return array{hint: string, constructions: int}
+     */
+    private function detectSentenceLanguage(array $tokens): array
     {
         $english = 0;
         $tagalog = 0;
-        $prefixes = config('spelling.morphology_prefixes', ['maka', 'maki', 'mag', 'pag', 'nag', 'ma', 'ka', 'i', 'um']);
+        $constructions = 0;
+        $prefixes = config('spelling.morphology_prefixes', ['maka', 'maki', 'mag', 'pag', 'nag', 'na', 'ma', 'ka', 'i', 'um']);
 
         foreach ($tokens as $token) {
             $normalized = $token['normalized'];
             $entry = $this->dictionary->find($normalized);
 
-            // Taglish constructions (nag-apply, mag-email, i-stop) are handled by the
-            // hyphen rule. Their prefix is Tagalog, so they must not turn an otherwise
-            // Tagalog paragraph into "Tagalog, English". Only standalone English words
-            // (school, company, breakfast) count as English.
+            // Taglish constructions (nag-apply, mag-email, i-stop) mix both languages inside
+            // one word. They are counted separately (the label becomes "Taglish") and are
+            // not counted as standalone English words.
             if ($this->isTaglishConstruction($normalized, $entry, $prefixes)) {
                 $tagalog++;
+                $constructions++;
                 continue;
             }
 
@@ -884,10 +918,65 @@ class SpellCorrectionService
         }
 
         if ($english > 0 && $tagalog > 0) {
-            return 'taglish';
+            $hint = 'taglish';
+        } else {
+            $hint = $tagalog > $english ? 'tagalog' : 'english';
         }
 
-        return $tagalog > $english ? 'tagalog' : 'english';
+        return ['hint' => $hint, 'constructions' => $constructions];
+    }
+
+    /**
+     * Resolves a Filipino prefix + English root construction, including reduplication
+     * (mag-tetext = mag + te + text). Returns null when the word isn't one.
+     *
+     * @param  array{prefix: ?string, root: string}  $morphology
+     * @return array{canonical: string, alternatives: array<int, string>}|null
+     */
+    private function resolveTaglishConstruction(array $morphology): ?array
+    {
+        $prefix = $morphology['prefix'] ?? null;
+        if (! HyphenRule::appliesTo($prefix)) {
+            return null;
+        }
+
+        $rest = (string) ($morphology['root'] ?? '');
+        if (mb_strlen($rest) < 2) {
+            return null;
+        }
+
+        // [reduplicated chunk, root]: first without reduplication, then with 1-3 leading
+        // letters repeated at the start (tetext = te + text, mmeeting = m + meeting).
+        $splits = [['', $rest]];
+        for ($k = 1; $k <= 3; $k++) {
+            $chunk = mb_substr($rest, 0, $k);
+            $remaining = mb_substr($rest, $k);
+            if (mb_strlen($remaining) >= 2 && str_starts_with($remaining, $chunk)) {
+                $splits[] = [$chunk, $remaining];
+            }
+        }
+
+        foreach ($splits as [$chunk, $root]) {
+            if (! $this->isEnglishRoot($root)) {
+                continue;
+            }
+
+            // A reduplicated chunk with no vowel (the stray "m" in mmeeting) is a typo: drop it.
+            $redup = preg_match('/[aeiou]/u', $chunk) === 1 ? $chunk : '';
+            $stem = $redup.$root;
+
+            $canonical = HyphenRule::join($prefix, $stem);
+            $alternatives = [];
+            // Consonant-start roots take no hyphen. Offer the hyphenated spelling as a
+            // lower-ranked option.
+            if (! str_contains($canonical, '-')) {
+                $alternatives[] = $prefix.'-'.$stem;
+            }
+
+            return ['canonical' => $canonical, 'alternatives' => $alternatives];
+        }
+
+        return null;
     }
 
     /**
@@ -909,11 +998,17 @@ class SpellCorrectionService
             return false;
         }
 
-        return $this->isEnglishRoot($morph['root']);
+        return $this->resolveTaglishConstruction($morph) !== null;
     }
 
-    private function languageLabel(string $hint): string
+    private function languageLabel(string $hint, int $constructions = 0): string
     {
+        // Words that mix both languages inside one word (nag-apply, mag-tetext, na-miss)
+        // make the text Taglish. Otherwise list the languages that are actually present.
+        if ($constructions > 0) {
+            return 'Taglish';
+        }
+
         return match ($hint) {
             'taglish' => 'Tagalog, English',
             'tagalog' => 'Tagalog',
