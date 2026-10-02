@@ -24,6 +24,18 @@ class DictionaryService
     }
 
     /**
+     * True when the word exists in the dictionary under the given language.
+     * A word can have several rows (one per language), and find() only returns
+     * the most frequent one, so this checks a specific language directly.
+     */
+    public function hasLanguage(string $normalizedWord, string $language): bool
+    {
+        return Dictionary::where('word', $normalizedWord)
+            ->where('language', $language)
+            ->exists();
+    }
+
+    /**
      * Get candidate words for suggestions (length within tolerance).
      *
      * Candidates are ordered by length-proximity to the source word first,
@@ -33,9 +45,13 @@ class DictionaryService
      * in favor of common-but-distant ones before SpellCorrectionService
      * ever gets a chance to compute real Levenshtein distance on them.
      *
+     * $widePool adds two extra pools (same first two letters, same last two
+     * letters) so a rare word that the main pool crowds out can still be a
+     * candidate. Used for the main word lookup only, not for root lookups.
+     *
      * @return array<int, array{word: string, language: string, pos: ?string, frequency: int}>
      */
-    public function getCandidates(string $normalizedWord, int $lengthTolerance, int $maxCandidates): array
+    public function getCandidates(string $normalizedWord, int $lengthTolerance, int $maxCandidates, bool $widePool = false): array
     {
         $len = mb_strlen($normalizedWord);
         $tolerance = config('spelling.length_tolerance', $lengthTolerance);
@@ -83,6 +99,26 @@ class DictionaryService
             $rows = $rows->concat($broader);
         }
 
+        // Even with the same first letter, a rare real word (e.g. a Tagalog
+        // word) can fall outside the top $limit by frequency when thousands
+        // of same-length words share that letter. A typo usually keeps the
+        // start or the end of the word intact, so also pull words that share
+        // the first two or the last two letters.
+        if ($widePool && $len >= 4) {
+            $edgeLimit = intdiv($limit, 3);
+            $prefix2 = mb_substr($normalizedWord, 0, 2);
+            $suffix2 = mb_substr($normalizedWord, -2);
+
+            if (preg_match('/^[\p{L}\p{N}]{2}$/u', $prefix2) === 1) {
+                $rows = $rows->concat($this->edgePool($len, $tolerance, $prefix2.'%', $edgeLimit));
+            }
+            if (preg_match('/^[\p{L}\p{N}]{2}$/u', $suffix2) === 1) {
+                $rows = $rows->concat($this->edgePool($len, $tolerance, '%'.$suffix2, $edgeLimit));
+            }
+
+            $rows = $rows->unique(fn ($row) => $row->word.'|'.$row->language)->values();
+        }
+
         $out = [];
         foreach ($rows as $row) {
             $out[] = [
@@ -94,6 +130,17 @@ class DictionaryService
         }
 
         return $out;
+    }
+
+    private function edgePool(int $len, int $tolerance, string $pattern, int $limit)
+    {
+        return Dictionary::whereIn('language', $this->languages)
+            ->lengthWithin($len, $tolerance)
+            ->where('word', 'like', $pattern)
+            ->orderByRaw('ABS(LENGTH(word) - ?) ASC', [$len])
+            ->orderByDesc('frequency')
+            ->limit($limit)
+            ->get();
     }
 
     /**
