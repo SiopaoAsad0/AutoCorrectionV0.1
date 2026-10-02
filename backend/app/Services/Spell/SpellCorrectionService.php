@@ -205,7 +205,7 @@ class SpellCorrectionService
                 ! $isPhraseHead
                 && HyphenRule::appliesTo($morphPrefix)
                 && HyphenRule::join($morphPrefix, $morphRoot) === $normalized
-                && $this->isEnglishRoot($morphRoot, $this->dictionary->getCandidates($morphRoot, 2, 25))
+                && $this->isEnglishRoot($morphRoot)
             ) {
                 $morphRootEntry = $this->dictionary->find($morphRoot);
                 $wordResults[] = [
@@ -221,7 +221,7 @@ class SpellCorrectionService
                 continue;
             }
 
-            $candidates = $this->dictionary->getCandidates($normalized, $lengthTolerance, $maxSuggestions * 3);
+            $candidates = $this->dictionary->getCandidates($normalized, $lengthTolerance, $maxSuggestions * 3, true);
             $scored = [];
             $seenWords = [];
 
@@ -403,6 +403,12 @@ class SpellCorrectionService
                 $minCandidateConfidence,
                 $minContextProbability
             );
+
+            // A suggestion identical to what the user typed is never a correction.
+            $suggestions = array_values(array_filter(
+                $suggestions,
+                fn ($row) => mb_strtolower((string) ($row['word'] ?? '')) !== $normalized
+            ));
            foreach ($suggestions as $idx => $row) {
     $target = $row['compare_word'] ?? $row['word'];
     $breakdown = $this->levenshtein->editBreakdown($normalized, $target);
@@ -703,6 +709,16 @@ class SpellCorrectionService
         }
 
         $rootCandidates = $this->dictionary->getCandidates($root, 2, 25);
+
+        // Every dictionary row for a word is in $rootCandidates (one per language),
+        // so a word counts as English if any of its rows is tagged english.
+        $englishRoots = [];
+        foreach ($rootCandidates as $rootRow) {
+            if (($rootRow['language'] ?? null) === 'english') {
+                $englishRoots[mb_strtolower((string) ($rootRow['word'] ?? ''))] = true;
+            }
+        }
+
         $out = [];
         foreach ($rootCandidates as $candidate) {
             $candidateRoot = $candidate['word'] ?? '';
@@ -719,7 +735,7 @@ class SpellCorrectionService
             }
 
             // Hyphen rule applies to English roots only (see HyphenRule).
-            $isEnglishRoot = $this->isEnglishRoot(mb_strtolower($candidateRoot), $rootCandidates);
+            $isEnglishRoot = isset($englishRoots[mb_strtolower($candidateRoot)]);
             $rebuilt = $isEnglishRoot
                 ? HyphenRule::join($prefix, $candidateRoot)
                 : $prefix.$candidateRoot;
@@ -754,21 +770,12 @@ class SpellCorrectionService
 
     /**
      * True when the word exists in the dictionary as English. The dictionary can hold
-     * several rows for the same word (e.g. one tagged english, one tagged otherwise),
-     * so every row is checked, not just the first.
-     *
-     * @param  array<int, array<string, mixed>>  $rows
+     * several rows for the same word (one per language), so this asks for the English
+     * row directly instead of relying on find(), which returns only the most frequent.
      */
-    private function isEnglishRoot(string $root, array $rows): bool
+    private function isEnglishRoot(string $root): bool
     {
-        $root = mb_strtolower($root);
-        foreach ($rows as $row) {
-            if (mb_strtolower((string) ($row['word'] ?? '')) === $root && ($row['language'] ?? null) === 'english') {
-                return true;
-            }
-        }
-
-        return $this->dictionary->find($root)?->language === 'english';
+        return $this->dictionary->hasLanguage(mb_strtolower($root), 'english');
     }
 
     /**
@@ -902,7 +909,7 @@ class SpellCorrectionService
             return false;
         }
 
-        return $this->isEnglishRoot($morph['root'], $this->dictionary->getCandidates($morph['root'], 2, 25));
+        return $this->isEnglishRoot($morph['root']);
     }
 
     private function languageLabel(string $hint): string
