@@ -15,6 +15,10 @@ class AdaptedLevenshteinService
 
     private float $insertCost;
 
+    private float $vowelInsertCost;
+
+    private float $transposeCost;
+
     private float $deleteCost;
 
     private float $defaultSubstituteCost;
@@ -23,8 +27,16 @@ class AdaptedLevenshteinService
     {
         $costs = config('spelling.edit_costs', []);
         $this->insertCost = (float) ($costs['insert'] ?? 1.0);
+        // Filipino texting often drops vowels (sya = siya, ganto = ganito,
+        // salmat = salamat). Re-adding a missing vowel is therefore a cheaper
+        // edit than other insertions. Defaults to the normal insert cost, so
+        // nothing changes unless 'insert_vowel' is set in config.
+        $this->vowelInsertCost = (float) ($costs['insert_vowel'] ?? $this->insertCost);
         $this->deleteCost = (float) ($costs['delete'] ?? 1.0);
         $this->defaultSubstituteCost = (float) ($costs['substitute'] ?? 1.0);
+        // Swapping two neighbouring letters (emial -> email) is one slip of the fingers,
+        // not two substitutions.
+        $this->transposeCost = (float) ($costs['transpose'] ?? $this->defaultSubstituteCost);
 
         // Per-pair weighted substitution costs (phonetic-style penalties for
         // common Tagalog/Taglish typing confusions, e.g. f/p, v/b, e/i) are
@@ -55,17 +67,19 @@ class AdaptedLevenshteinService
         $charsB = mb_str_split($b);
         $lenA = count($charsA);
         $lenB = count($charsB);
+        $insB = array_map(fn ($c) => $this->insertCostFor($c), $charsB);
 
         if ($lenA === 0) {
-            return $lenB * $this->insertCost;
+            return (float) array_sum($insB);
         }
         if ($lenB === 0) {
             return $lenA * $this->deleteCost;
         }
 
-        $prev = range(0, $lenB);
+        $prev2 = [];
+        $prev = [0.0];
         for ($j = 1; $j <= $lenB; $j++) {
-            $prev[$j] = $j * $this->insertCost;
+            $prev[$j] = $prev[$j - 1] + $insB[$j - 1];
         }
 
         for ($i = 1; $i <= $lenA; $i++) {
@@ -74,12 +88,20 @@ class AdaptedLevenshteinService
             for ($j = 1; $j <= $lenB; $j++) {
                 $charB = $charsB[$j - 1];
                 $subCost = $charA === $charB ? 0.0 : $this->substitutionCost($charA, $charB);
-                $curr[$j] = min(
+                $best = min(
                     $prev[$j] + $this->deleteCost,
-                    $curr[$j - 1] + $this->insertCost,
+                    $curr[$j - 1] + $insB[$j - 1],
                     $prev[$j - 1] + $subCost
                 );
+                if (
+                    $i > 1 && $j > 1 && $charA !== $charB
+                    && $charA === $charsB[$j - 2] && $charsA[$i - 2] === $charB
+                ) {
+                    $best = min($best, $prev2[$j - 2] + $this->transposeCost);
+                }
+                $curr[$j] = $best;
             }
+            $prev2 = $prev;
             $prev = $curr;
         }
 
@@ -97,6 +119,7 @@ class AdaptedLevenshteinService
         $charsB = mb_str_split($b);
         $lenA = count($charsA);
         $lenB = count($charsB);
+        $insB = array_map(fn ($c) => $this->insertCostFor($c), $charsB);
 
         if ($lenA === 0 && $lenB === 0) {
             return ['substitutions' => 0, 'insertions' => 0, 'deletions' => 0];
@@ -109,8 +132,9 @@ class AdaptedLevenshteinService
         }
 
         $dp = [];
-        for ($j = 0; $j <= $lenB; $j++) {
-            $dp[0][$j] = $j * $this->insertCost;
+        $dp[0][0] = 0.0;
+        for ($j = 1; $j <= $lenB; $j++) {
+            $dp[0][$j] = $dp[0][$j - 1] + $insB[$j - 1];
         }
         for ($i = 1; $i <= $lenA; $i++) {
             $dp[$i][0] = $i * $this->deleteCost;
@@ -121,11 +145,18 @@ class AdaptedLevenshteinService
             for ($j = 1; $j <= $lenB; $j++) {
                 $charB = $charsB[$j - 1];
                 $subCost = $charA === $charB ? 0.0 : $this->substitutionCost($charA, $charB);
-                $dp[$i][$j] = min(
+                $best = min(
                     $dp[$i - 1][$j] + $this->deleteCost,
-                    $dp[$i][$j - 1] + $this->insertCost,
+                    $dp[$i][$j - 1] + $insB[$j - 1],
                     $dp[$i - 1][$j - 1] + $subCost
                 );
+                if (
+                    $i > 1 && $j > 1 && $charA !== $charB
+                    && $charA === $charsB[$j - 2] && $charsA[$i - 2] === $charB
+                ) {
+                    $best = min($best, $dp[$i - 2][$j - 2] + $this->transposeCost);
+                }
+                $dp[$i][$j] = $best;
             }
         }
 
@@ -154,7 +185,7 @@ class AdaptedLevenshteinService
             $subCost = $charA === $charB ? 0.0 : $this->substitutionCost($charA, $charB);
 
             $costDelete = $dp[$i - 1][$j] + $this->deleteCost;
-            $costInsert = $dp[$i][$j - 1] + $this->insertCost;
+            $costInsert = $dp[$i][$j - 1] + $insB[$j - 1];
             $costDiag = $dp[$i - 1][$j - 1] + $subCost;
             $here = $dp[$i][$j];
 
@@ -165,6 +196,16 @@ class AdaptedLevenshteinService
                 }
                 $i--;
                 $j--;
+            } elseif (
+                $i > 1 && $j > 1 && $charA !== $charB
+                && $charA === $charsB[$j - 2] && $charsA[$i - 2] === $charB
+                && $this->floatEq($here, $dp[$i - 2][$j - 2] + $this->transposeCost)
+            ) {
+                // A swap of two neighbouring letters is reported as two substitutions
+                // (the breakdown only has substitution / insertion / deletion counts).
+                $subs += 2;
+                $i -= 2;
+                $j -= 2;
             } elseif ($this->floatEq($here, $costDelete)) {
                 $del++;
                 $i--;
@@ -179,6 +220,13 @@ class AdaptedLevenshteinService
             'insertions' => $ins,
             'deletions' => $del,
         ];
+    }
+
+    private function insertCostFor(string $char): float
+    {
+        return in_array(mb_strtolower($char), ['a', 'e', 'i', 'o', 'u'], true)
+            ? $this->vowelInsertCost
+            : $this->insertCost;
     }
 
     private function substitutionCost(string $from, string $to): float
