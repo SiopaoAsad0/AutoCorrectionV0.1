@@ -149,7 +149,7 @@ class SpellCorrectionService
             }
 
             if ($entry !== null && ! $isPhraseHead) {
-                $wordResults[] = [
+                $correctRow = [
                     'word' => $raw,
                     'normalized' => $normalized,
                     'status' => 'correct',
@@ -158,6 +158,27 @@ class SpellCorrectionService
                     'distance' => null,
                     'language' => $language,
                 ];
+
+                // Hyphenated Taglish entry (i-cheat): it stays CORRECT, but the hyphen-free
+                // spelling is offered as an optional suggestion.
+                if ($language === 'taglish' && str_contains($normalized, '-')) {
+                    $plain = str_replace('-', '', $normalized);
+                    if ($plain !== '' && $plain !== $normalized) {
+                        $correctRow['suggestions'] = [[
+                            'word' => $plain,
+                            'distance' => round($this->levenshtein->distance($normalized, $plain), 2),
+                            'pos' => $this->posTagging->tag($plain, $dictPos),
+                            'frequency' => (int) $entry->frequency,
+                            'context_score' => 0.0,
+                            'confidence' => 0.6,
+                            'optional' => true,
+                            'error_breakdown' => $this->levenshtein->editBreakdown($normalized, $plain),
+                        ]];
+                        $correctRow['hyphen_free_option'] = true;
+                    }
+                }
+
+                $wordResults[] = $correctRow;
                 continue;
             }
 
@@ -935,6 +956,10 @@ class SpellCorrectionService
                 $english++;
             } elseif ($entry?->language === 'tagalog') {
                 $tagalog++;
+            } elseif ($entry?->language === 'taglish') {
+                // Dictionary words already tagged Taglish (i-cheat, na-save) mix both languages.
+                $tagalog++;
+                $constructions++;
             }
         }
 
@@ -1020,6 +1045,12 @@ class SpellCorrectionService
         }
 
         return $this->resolveTaglishConstruction($morph) !== null;
+    }
+
+    private function isMeaningfulSplitPart(string $part): bool
+    {
+        return mb_strlen($part) >= 3
+            || in_array($part, (array) config('spelling.valid_short_words', []), true);
     }
 
     private function languageLabel(string $hint, int $constructions = 0): string
@@ -1119,6 +1150,12 @@ class SpellCorrectionService
             }
 
             if ($right === 'ng') {
+                continue;
+            }
+
+            // Both halves must be real words: 3+ letters, or a listed short word (ka, po, sa ...).
+            // This drops junk splits such as "legalie" -> "legal ie".
+            if (! $this->isMeaningfulSplitPart($left) || ! $this->isMeaningfulSplitPart($right)) {
                 continue;
             }
 
