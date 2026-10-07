@@ -17,6 +17,11 @@ class DictionaryService
      */
     public function find(string $normalizedWord): ?Dictionary
     {
+        // Junk 1-2 letter rows (es, ie ...) are not words, so they never count as a match.
+        if ($this->isInvalidShortWord($normalizedWord)) {
+            return null;
+        }
+
         return Dictionary::where('word', $normalizedWord)
             ->whereIn('language', $this->languages)
             ->orderByDesc('frequency')
@@ -30,6 +35,10 @@ class DictionaryService
      */
     public function hasLanguage(string $normalizedWord, string $language): bool
     {
+        if ($this->isInvalidShortWord($normalizedWord)) {
+            return false;
+        }
+
         return Dictionary::where('word', $normalizedWord)
             ->where('language', $language)
             ->exists();
@@ -72,8 +81,9 @@ class DictionaryService
         $firstChar = mb_substr($normalizedWord, 0, 1);
         $firstCharIsSafe = $firstChar !== '' && preg_match('/^[\p{L}\p{N}]$/u', $firstChar) === 1;
 
-        $query = Dictionary::whereIn('language', $this->languages)
-            ->lengthWithin($len, $tolerance);
+        $query = $this->excludeInvalidShort(
+            Dictionary::whereIn('language', $this->languages)->lengthWithin($len, $tolerance)
+        );
 
         if ($firstCharIsSafe) {
             $query->where('word', 'like', $firstChar.'%');
@@ -89,8 +99,9 @@ class DictionaryService
         // mistyped: only broaden the search if the narrow pool came up
         // short, so the common case doesn't reintroduce the crowding bug.
         if ($firstCharIsSafe && $rows->count() < min($maxCandidates * 4, $limit)) {
-            $broader = Dictionary::whereIn('language', $this->languages)
-                ->lengthWithin($len, $tolerance)
+            $broader = $this->excludeInvalidShort(
+                Dictionary::whereIn('language', $this->languages)->lengthWithin($len, $tolerance)
+            )
                 ->where('word', 'not like', $firstChar.'%')
                 ->orderByRaw('ABS(LENGTH(word) - ?) ASC', [$len])
                 ->orderByDesc('frequency')
@@ -132,10 +143,30 @@ class DictionaryService
         return $out;
     }
 
+    /** @return array<int, string> */
+    private function validShortWords(): array
+    {
+        return array_map('mb_strtolower', (array) config('spelling.valid_short_words', []));
+    }
+
+    private function isInvalidShortWord(string $word): bool
+    {
+        return mb_strlen($word) <= 2 && ! in_array(mb_strtolower($word), $this->validShortWords(), true);
+    }
+
+    /** Keeps only rows that are longer than 2 letters or are on the valid-short-words list. */
+    private function excludeInvalidShort($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereRaw('LENGTH(word) > 2')->orWhereIn('word', $this->validShortWords());
+        });
+    }
+
     private function edgePool(int $len, int $tolerance, string $pattern, int $limit)
     {
-        return Dictionary::whereIn('language', $this->languages)
-            ->lengthWithin($len, $tolerance)
+        return $this->excludeInvalidShort(
+            Dictionary::whereIn('language', $this->languages)->lengthWithin($len, $tolerance)
+        )
             ->where('word', 'like', $pattern)
             ->orderByRaw('ABS(LENGTH(word) - ?) ASC', [$len])
             ->orderByDesc('frequency')
