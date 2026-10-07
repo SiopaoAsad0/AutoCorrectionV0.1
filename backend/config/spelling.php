@@ -397,6 +397,20 @@ return [
     ],
 
     /*
+    | The only 1-2 letter words that count as real words. Any other 1-2 letter dictionary row
+    | (es, ie, xq ...) is treated as junk: never CORRECT, never a suggestion, never a part of a
+    | split suggestion ("legal ie"). Add a word here if it is genuinely valid.
+    */
+    'valid_short_words' => [
+        // English
+        'a', 'i', 'am', 'an', 'as', 'at', 'be', 'by', 'do', 'go', 'he', 'hi', 'if', 'in', 'is',
+        'it', 'me', 'my', 'no', 'of', 'oh', 'ok', 'on', 'or', 'so', 'to', 'up', 'us', 'we',
+        // Tagalog
+        'o', 'ay', 'ba', 'na', 'pa', 'sa', 'ka', 'ko', 'mo', 'ng', 'ni', 'si', 'po', 'ho', 'ha',
+        'eh', 'oo', 'di',
+    ],
+
+    /*
     | Heuristic next-word prediction (last-token and multi-token tail). LM/transformer can replace this later.
     */
     'prediction_seeds' => [
