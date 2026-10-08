@@ -159,23 +159,11 @@ class SpellCorrectionService
                     'language' => $language,
                 ];
 
-                // Hyphenated Taglish entry (i-cheat): it stays CORRECT, but the hyphen-free
+                // Hyphenated Taglish word (i-cheat): it stays CORRECT, but the hyphen-free
                 // spelling is offered as an optional suggestion.
-                if ($language === 'taglish' && str_contains($normalized, '-')) {
-                    $plain = str_replace('-', '', $normalized);
-                    if ($plain !== '' && $plain !== $normalized) {
-                        $correctRow['suggestions'] = [[
-                            'word' => $plain,
-                            'distance' => round($this->levenshtein->distance($normalized, $plain), 2),
-                            'pos' => $this->posTagging->tag($plain, $dictPos),
-                            'frequency' => (int) $entry->frequency,
-                            'context_score' => 0.0,
-                            'confidence' => 0.6,
-                            'optional' => true,
-                            'error_breakdown' => $this->levenshtein->editBreakdown($normalized, $plain),
-                        ]];
-                        $correctRow['hyphen_free_option'] = true;
-                    }
+                if (str_contains($normalized, '-') && ($language === 'taglish' || $this->isIPrefixedEnglish($normalized))) {
+                    $correctRow['suggestions'] = $this->hyphenFreeOption($normalized, $dictPos, (int) $entry->frequency);
+                    $correctRow['hyphen_free_option'] = true;
                 }
 
                 $wordResults[] = $correctRow;
@@ -241,7 +229,7 @@ class SpellCorrectionService
             $construction = $isPhraseHead ? null : $this->resolveTaglishConstruction($morphology);
             if ($construction !== null) {
                 if ($construction['canonical'] === $normalized) {
-                    $wordResults[] = [
+                    $constructionRow = [
                         'word' => $raw,
                         'normalized' => $normalized,
                         'status' => 'correct',
@@ -252,6 +240,12 @@ class SpellCorrectionService
                         'morphology' => $morphology,
                         'taglish_construction' => true,
                     ];
+                    // i-cheat stays CORRECT, with icheat offered as an optional spelling.
+                    if (($morphology['prefix'] ?? null) === 'i' && str_contains($normalized, '-')) {
+                        $constructionRow['suggestions'] = $this->hyphenFreeOption($normalized, null, 1000);
+                        $constructionRow['hyphen_free_option'] = true;
+                    }
+                    $wordResults[] = $constructionRow;
                     continue;
                 }
 
@@ -1049,6 +1043,34 @@ class SpellCorrectionService
         }
 
         return $this->resolveTaglishConstruction($morph) !== null;
+    }
+
+    /** i-cheat, i-resend ...: the "i-" prefix followed by an English root. */
+    private function isIPrefixedEnglish(string $word): bool
+    {
+        return preg_match('/^i-([a-z]+)$/', $word, $m) === 1 && $this->isEnglishRoot($m[1]);
+    }
+
+    /**
+     * Optional hyphen-free spelling of a hyphenated Taglish word (i-cheat -> icheat).
+     * The word itself stays CORRECT; this is only offered as an alternative.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function hyphenFreeOption(string $normalized, ?string $pos, int $frequency): array
+    {
+        $plain = str_replace('-', '', $normalized);
+
+        return [[
+            'word' => $plain,
+            'distance' => round($this->levenshtein->distance($normalized, $plain), 2),
+            'pos' => $this->posTagging->tag($plain, $pos),
+            'frequency' => $frequency,
+            'context_score' => 0.0,
+            'confidence' => 0.6,
+            'optional' => true,
+            'error_breakdown' => $this->levenshtein->editBreakdown($normalized, $plain),
+        ]];
     }
 
     private function isMeaningfulSplitPart(string $part): bool
