@@ -424,6 +424,10 @@ class SpellCorrectionService
                     if (isset($seenWords[$key])) {
                         continue;
                     }
+                    // Abbreviations are never offered as suggestions.
+                    if (in_array($key, (array) config('spelling.blocked_suggestion_words', []), true)) {
+                        continue;
+                    }
                     $entry = $this->dictionary->find($key);
                     $dist = $this->levenshtein->distance($normalized, $key);
                     if ($dist <= $maxDistance + 1) {
