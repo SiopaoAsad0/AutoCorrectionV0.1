@@ -307,6 +307,7 @@ return [
         'kailngan' => 'kailangan',
         'emial' => 'email',
         'syang' => 'siyang',
+        'es' => 'is',
     ],
     'force_normalize_lexemes' => [
         'diko', 'dto', 'kc', 'ung', 'sakanila', 'samin', 'goodmorning',
@@ -394,6 +395,40 @@ return [
     'extra_english_roots' => [
         'resend', 'text', 'meeting', 'miss', 'save', 'email', 'apply', 'open', 'wash', 'wish',
         'stop', 'remind', 'click', 'update', 'login', 'compute',
+    ],
+
+    /*
+    | Abbreviations, units, acronyms, titles, months, weekdays and state/country codes that must
+    | never be offered as a suggestion (from the MAJOR REVISION feedback). Typing one of them is
+    | unaffected. Rows tagged tagalog are never blocked, so real Tagalog words that look like an
+    | abbreviation (mo, pa, lang) are still suggested. Delete a word from this list to allow it again.
+    */
+    'blocked_suggestion_words' => [
+        'rsx', 'approx', 'ave', 'avg', 'blvd', 'cm', 'dpi', 'ft', 'gb', 'ghz', 'hr', 'hrs',
+        'hwy', 'hz', 'kb', 'kg', 'km', 'kw', 'lb', 'lbs', 'max', 'mb', 'mg', 'mhz', 'mi', 'min',
+        'ml', 'mm', 'mph', 'oz', 'ppm', 'qty', 'rd', 'rpm', 'sec', 'aka', 'ceo', 'co', 'co.',
+        'comp.', 'corp', 'dept', 'diy', 'dj', 'eg', 'est', 'et', 'etc', 'gmbh', 'ie', 'inc',
+        'llc', 'lol', 'ltd', 'mba', 'misc', 'ok', 'phd', 'plc', 'pm', 'pp', 'prev', 'ps', 're',
+        'ref', 'rev', 'rrp', 'sku', 'tba', 'tel', 'tm', 'vip', 'vol', 'vs', 'admin', 'bio',
+        'biol', 'biz', 'chem', 'comm', 'comp', 'config', 'const', 'demo', 'dev', 'devel', 'dir',
+        'docs', 'eval', 'exec', 'ext', 'hist', 'info', 'intl', 'intro', 'lang', 'lib', 'mag',
+        'med', 'mem', 'nav', 'phys', 'pic', 'pics', 'proc', 'sci', 'spec', 'specs', 'struct',
+        'tmp', 'univ', 'utils', 'vid', 'vids', 'aol', 'api', 'ascii', 'asp', 'bbs', 'cd', 'cds',
+        'cgi', 'com', 'cpu', 'css', 'cvs', 'ddr', 'dns', 'dsl', 'dvd', 'dvds', 'faq', 'faqs',
+        'ftp', 'gif', 'gnome', 'gnu', 'gpl', 'gps', 'gsm', 'gui', 'hd', 'hdtv', 'href', 'html',
+        'http', 'ibm', 'ide', 'img', 'ip', 'isbn', 'iso', 'isp', 'jpeg', 'jpg', 'js', 'lcd',
+        'mp', 'mpeg', 'mpg', 'msn', 'org', 'os', 'pc', 'pda', 'pdf', 'php', 'pmid', 'ppc',
+        'rfc', 'rom', 'rss', 'scsi', 'sms', 'smtp', 'sql', 'src', 'ssl', 'tcp', 'tv', 'url',
+        'usb', 'vhs', 'voip', 'vpn', 'wav', 'wifi', 'www', 'xhtml', 'xml', 'apr', 'aug', 'dec',
+        'feb', 'jan', 'jul', 'jun', 'mar', 'nov', 'oct', 'sep', 'sept', 'au', 'bbc', 'bmw',
+        'cbs', 'cia', 'cnn', 'epa', 'espn', 'eu', 'fbi', 'fcc', 'fda', 'hp', 'ieee', 'irs',
+        'mit', 'mlb', 'nasa', 'nato', 'nba', 'nbc', 'ncaa', 'nfl', 'nhl', 'nhs', 'nsw', 'nz',
+        'oecd', 'qld', 'uk', 'un', 'usa', 'usda', 'usgs', 'usps', 'cdna', 'dna', 'hiv', 'mrna',
+        'rna', 'aud', 'cet', 'cst', 'edt', 'eur', 'gbp', 'gmt', 'pdt', 'pst', 'usd', 'utc',
+        'doc', 'dr', 'hon', 'jr', 'mr', 'mrs', 'ms', 'mt', 'sr', 'st', 'ak', 'al', 'az', 'ca',
+        'ct', 'dc', 'fl', 'ga', 'ia', 'il', 'ks', 'ky', 'ma', 'md', 'mn', 'mo', 'nc', 'nd',
+        'nh', 'nj', 'nm', 'nv', 'ny', 'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'va', 'vt',
+        'wa', 'wi', 'wv', 'wy', 'fri', 'mon', 'sat', 'thu', 'tue', 'wed', 'eds', 'eos'
     ],
 
     /*
