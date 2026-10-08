@@ -154,12 +154,31 @@ class DictionaryService
         return mb_strlen($word) <= 2 && ! in_array(mb_strtolower($word), $this->validShortWords(), true);
     }
 
-    /** Keeps only rows that are longer than 2 letters or are on the valid-short-words list. */
+    /** @return array<int, string> */
+    private function blockedSuggestionWords(): array
+    {
+        return array_map('mb_strtolower', (array) config('spelling.blocked_suggestion_words', []));
+    }
+
+    /**
+     * Candidate filter. Keeps only rows that are longer than 2 letters or are on the
+     * valid-short-words list, and drops abbreviations on the blocked-suggestion list
+     * (rows tagged tagalog are kept: mo, pa and lang are real Tagalog words).
+     */
     private function excludeInvalidShort($query)
     {
-        return $query->where(function ($q) {
+        $query->where(function ($q) {
             $q->whereRaw('LENGTH(word) > 2')->orWhereIn('word', $this->validShortWords());
         });
+
+        $blocked = $this->blockedSuggestionWords();
+        if ($blocked !== []) {
+            $query->where(function ($q) use ($blocked) {
+                $q->whereNotIn('word', $blocked)->orWhere('language', 'tagalog');
+            });
+        }
+
+        return $query;
     }
 
     private function edgePool(int $len, int $tolerance, string $pattern, int $limit)
